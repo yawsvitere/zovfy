@@ -61,7 +61,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   width: 78px;
-  padding: 15px 0;
+  padding: 68px 0 15px;
   gap: 8px;
   overflow-x: hidden;
   background: transparent;
@@ -80,41 +80,24 @@ button:disabled {
   backdrop-filter: blur(6px);
 }
 
-.music-sidebar-header {
-  padding: 0 12px;
-}
-
-.music-brand {
+.music-header-brand {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 42px;
   gap: 9px;
-  border: 0;
-  background: transparent;
+  padding: 0;
   color: var(--ink);
+  background: transparent;
+  border: 0;
   font-size: 21px;
   font-weight: 750;
   cursor: pointer;
 }
 
-.music-sidebar.expanded .music-brand {
-  justify-content: flex-start;
-  padding: 0 8px;
-}
-
-.music-brand svg {
-  color: var(--accent);
-}
-
-.brand-text {
-  display: none;
-  white-space: nowrap;
-}
-
-.music-sidebar.expanded .brand-text {
-  display: inline;
+.music-header-brand img {
+  display: block;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
 }
 
 .music-nav {
@@ -298,8 +281,7 @@ button:disabled {
 }
 
 .music-sidebar:not(.expanded) .playlist-info,
-.music-sidebar:not(.expanded) .mini-play-btn,
-.music-sidebar:not(.expanded) .brand-text {
+.music-sidebar:not(.expanded) .mini-play-btn {
   display: none;
 }
 
@@ -322,15 +304,15 @@ button:disabled {
 .music-header {
   position: fixed;
   top: 0;
-  left: 78px;
+  left: 0;
   right: 0;
   z-index: 20;
   display: flex;
   min-height: 60px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 18px;
-  padding: 8px clamp(20px, 4vw, 54px);
+  padding: 8px clamp(20px, 4vw, 26px);
   background: transparent;
   border-bottom: 1px solid transparent;
   box-shadow: none;
@@ -346,10 +328,6 @@ button:disabled {
   backdrop-filter: blur(7px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
-}
-
-.music-sidebar.expanded + .music-main .music-header {
-  left: 258px;
 }
 
 .music-header-spacer {
@@ -374,6 +352,28 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 9px;
+  margin-left: auto;
+}
+
+.music-user-avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  overflow: hidden;
+  padding: 0;
+  color: var(--text-light);
+  background: var(--bg-secondary);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.music-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .music-heading h1 {
@@ -532,12 +532,9 @@ button:disabled {
     position: static;
     width: 100%;
     height: auto;
-    padding: 10px 14px;
+    padding: 68px 14px 10px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
-  }
-  .music-brand {
-    padding: 3px 4px 10px;
   }
   .music-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));

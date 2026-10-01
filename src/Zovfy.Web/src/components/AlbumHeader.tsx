@@ -1,24 +1,23 @@
-import { Plus } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { Screen } from "../types";
 
 type Props = {
-  title: string;
-  screen: Screen;
   authenticated: boolean;
-  onNavigate: (screen: Screen) => void;
+  avatarUrl: string | null;
+  sidebarExpanded: boolean;
   onLogin: () => void;
-  onLogout: () => void;
+  onToggleSidebar: () => void;
 };
 
 export function AlbumHeader({
-  screen,
   authenticated,
-  onNavigate,
+  avatarUrl,
+  sidebarExpanded,
   onLogin,
-  onLogout,
+  onToggleSidebar,
 }: Props) {
   const [scrolled, setScrolled] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
@@ -27,23 +26,44 @@ export function AlbumHeader({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => setAvatarFailed(false), [avatarUrl]);
+
   return (
     <header className={`music-header${scrolled ? " scrolled" : ""}`}>
-      <div className="music-header-spacer" />
+      <button
+        type="button"
+        className="music-header-brand"
+        onClick={onToggleSidebar}
+        aria-label={sidebarExpanded ? "Свернуть меню" : "Развернуть меню"}
+        aria-expanded={sidebarExpanded}
+      >
+        <img src="/zovfy.svg" alt="" />
+      </button>
       <div className="header-actions">
-        <button
-          className="secondary-button auth-trigger"
-          onClick={authenticated ? onLogout : onLogin}
-        >
-          {authenticated ? "Выйти" : "Войти"}
-        </button>
-        {screen !== "create" && (
-          <button
-            className="primary-button"
-            onClick={() => onNavigate("create")}
+        {authenticated ? (
+          <div
+            className="music-user-avatar"
+            role="img"
+            aria-label="Аватар пользователя"
           >
-            <Plus size={17} />
-            Новый альбом
+            {avatarUrl && !avatarFailed ? (
+              <img
+                src={avatarUrl}
+                alt=""
+                onError={() => setAvatarFailed(true)}
+              />
+            ) : (
+              <UserRound size={20} />
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="music-user-avatar"
+            onClick={onLogin}
+            aria-label="Войти"
+          >
+            <UserRound size={20} />
           </button>
         )}
       </div>

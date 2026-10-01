@@ -1,15 +1,14 @@
-import { Compass, Disc3, Home, ListMusic, Play, Plus } from "lucide-react";
-import { useState } from "react";
+import { Compass, Home, ListMusic, Play, Plus } from "lucide-react";
 import type { Album, Screen } from "../types";
 
 type Props = {
   albums: Album[];
   screen: Screen;
+  expanded: boolean;
   onNavigate: (screen: Screen) => void;
 };
 
-export function AlbumSidebar({ albums, screen, onNavigate }: Props) {
-  const [expanded, setExpanded] = useState(false);
+export function AlbumSidebar({ albums, screen, expanded, onNavigate }: Props) {
   const visibleAlbums = albums.slice(0, 6);
 
   const navItems = [
@@ -36,19 +35,6 @@ export function AlbumSidebar({ albums, screen, onNavigate }: Props) {
 
   return (
     <aside className={`music-sidebar ${expanded ? "expanded" : ""}`}>
-      <div className="music-sidebar-header">
-        <button
-          type="button"
-          className="music-brand"
-          data-tooltip={expanded ? "Свернуть меню" : "Развернуть меню"}
-          onClick={() => setExpanded((value) => !value)}
-          aria-label={expanded ? "Свернуть меню" : "Развернуть меню"}
-        >
-          <Disc3 size={22} />
-          <span className="brand-text">zovfy</span>
-        </button>
-      </div>
-
       <nav className="music-nav" aria-label="Навигация">
         {navItems.map(({ key, label, screen: itemScreen, icon: Icon }) => {
           const isActive =

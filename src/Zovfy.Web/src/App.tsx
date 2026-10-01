@@ -6,6 +6,7 @@ import {
   getAlbum,
   loadAlbums,
   loadMyLikes,
+  loadMyProfile,
   updateAlbum,
   updateArtist,
 } from "./api";
@@ -36,6 +37,8 @@ function App() {
   const [accessToken, setAccessToken] = useState(() =>
     localStorage.getItem("zovfy.accessToken"),
   );
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -63,8 +66,33 @@ function App() {
     void refreshAlbums();
   }, []);
 
+  async function loadAlbumDetail(id: string, initialAlbum?: Album) {
+    setSelectedAlbum(initialAlbum ?? null);
+    setScreen("detail");
+    setLoadingDetail(true);
+    setError("");
+    try {
+      setSelectedAlbum(await getAlbum(id, accessToken));
+    } catch (caught) {
+      setError(
+        caught instanceof Error ? caught.message : "Не удалось открыть альбом.",
+      );
+    } finally {
+      setLoadingDetail(false);
+    }
+  }
+
   useEffect(() => {
     function syncLocation() {
+      const albumMatch = window.location.pathname.match(/^\/albums\/([^/]+)\/?$/);
+      if (albumMatch) {
+        void loadAlbumDetail(decodeURIComponent(albumMatch[1]));
+        return;
+      }
+      if (window.location.pathname.replace(/\/$/, "") === "/albums") {
+        setScreen("albums");
+        return;
+      }
       const match = window.location.pathname.match(/^\/artist\/([^/]+)\/?$/);
       if (match) {
         setSelectedArtist(decodeURIComponent(match[1]));
@@ -103,6 +131,24 @@ function App() {
   }, [accessToken]);
 
   useEffect(() => {
+    if (!accessToken) {
+      setUserAvatarUrl(null);
+      return;
+    }
+    let active = true;
+    void loadMyProfile(accessToken)
+      .then((profile) => {
+        if (active) setUserAvatarUrl(profile.avatarUrl ?? null);
+      })
+      .catch(() => {
+        if (active) setUserAvatarUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
+
+  useEffect(() => {
     function updateAudioLevel(event: Event) {
       const level = (event as CustomEvent<number>).detail;
       appRef.current?.style.setProperty(
@@ -117,8 +163,10 @@ function App() {
   }, []);
 
   function navigate(next: Screen) {
-    if (next !== "artist")
-      window.history.replaceState({ screen: next }, "", "/");
+    if (next !== "artist") {
+      const path = next === "albums" ? "/albums" : "/";
+      window.history.replaceState({ screen: next }, "", path);
+    }
     setScreen(next);
     setError("");
     setNotice("");
@@ -146,20 +194,12 @@ function App() {
   }
 
   async function openAlbum(album: Album) {
-    window.history.replaceState({ screen: "detail" }, "", "/");
-    setSelectedAlbum(album);
-    setScreen("detail");
-    setLoadingDetail(true);
-    setError("");
-    try {
-      setSelectedAlbum(await getAlbum(album.id, accessToken));
-    } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Не удалось открыть альбом.",
-      );
-    } finally {
-      setLoadingDetail(false);
-    }
+    window.history.pushState(
+      { screen: "detail" },
+      "",
+      `/albums/${encodeURIComponent(album.id)}`,
+    );
+    await loadAlbumDetail(album.id, album);
   }
 
   async function saveAlbum(id: string, formData: FormData) {
@@ -192,8 +232,8 @@ function App() {
     }
     await createAlbum(formData, accessToken);
     await refreshAlbums();
+    navigate("albums");
     setNotice("Альбом добавлен в каталог.");
-    setScreen("albums");
   }
 
   async function completeAuth(
@@ -212,12 +252,6 @@ function App() {
     );
   }
 
-  function logout() {
-    localStorage.removeItem("zovfy.accessToken");
-    setAccessToken(null);
-    setNotice("Вы вышли из аккаунта.");
-  }
-
   function playTracks(tracks: Track[], index: number, coverUrl?: string) {
     const queue = tracks.map((track) => ({ ...track, coverUrl }));
     const track = queue[index];
@@ -228,16 +262,6 @@ function App() {
     }
   }
 
-  const title =
-    screen === "create"
-      ? "Новый альбом"
-      : screen === "detail"
-        ? (selectedAlbum?.name ?? "Альбом")
-        : screen === "artist"
-          ? selectedArtist
-          : screen === "albums"
-            ? "Альбомы"
-            : "Главная";
   const backgroundCover = playingTrack?.coverUrl ?? selectedAlbum?.coverUrl;
   const appStyle = backgroundCover
     ? ({
@@ -251,15 +275,19 @@ function App() {
       className={`music-app${isPlaying ? " is-playing" : ""}`}
       style={appStyle}
     >
-      <AlbumSidebar albums={albums} screen={screen} onNavigate={navigate} />
+      <AlbumSidebar
+        albums={albums}
+        screen={screen}
+        expanded={sidebarExpanded}
+        onNavigate={navigate}
+      />
       <main className="music-main">
         <AlbumHeader
-          title={title}
-          screen={screen}
           authenticated={Boolean(accessToken)}
-          onNavigate={navigate}
+          avatarUrl={userAvatarUrl}
+          sidebarExpanded={sidebarExpanded}
           onLogin={() => setAuthOpen(true)}
-          onLogout={logout}
+          onToggleSidebar={() => setSidebarExpanded((expanded) => !expanded)}
         />
         <section className="music-content">
           {error && (
