@@ -78,6 +78,17 @@
   font-size: 13px;
 }
 
+.form-fields select {
+  width: 100%;
+  min-height: 41px;
+  padding: 0 11px;
+  color: var(--ink);
+  background: var(--bg-secondary);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 150px;
@@ -155,7 +166,10 @@
 
 .pending-tracks li {
   display: grid;
-  grid-template-columns: 30px minmax(130px, 1fr) minmax(100px, 1fr) 34px;
+  grid-template-columns: 30px minmax(120px, 1fr) minmax(110px, 0.8fr) minmax(
+      100px,
+      1fr
+    ) 34px;
   min-height: 52px;
   align-items: center;
   gap: 10px;
@@ -175,6 +189,10 @@
   border: 1px solid transparent;
   border-radius: 3px;
   font-size: 13px;
+}
+
+.pending-tracks li > input + input {
+  color: var(--text-light);
 }
 
 .pending-tracks li > input:focus {
@@ -208,23 +226,26 @@
 }
 
 @media (max-width: 760px) {
-.album-form {
+  .album-form {
     padding: 18px 15px;
   }
 }
 
 @media (max-width: 480px) {
-.form-row {
+  .form-row {
     grid-template-columns: minmax(0, 1fr);
   }
-.pending-tracks li {
+  .pending-tracks li {
     grid-template-columns: 25px minmax(0, 1fr) 32px;
     gap: 5px;
   }
-.pending-tracks li > small {
+  .pending-tracks li > small {
     display: none;
   }
-.form-actions {
+  .pending-tracks li > input + input {
+    grid-column: 2;
+  }
+  .form-actions {
     flex-wrap: wrap;
   }
 }

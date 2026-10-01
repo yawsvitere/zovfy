@@ -5,6 +5,7 @@ public sealed class Album
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Artist { get; set; } = string.Empty;
+    public string? Genre { get; set; }
     public int? Year { get; set; }
     public string? CoverObjectKey { get; set; }
     public Guid OwnerId { get; set; }

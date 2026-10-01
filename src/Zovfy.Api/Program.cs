@@ -124,6 +124,7 @@ await using (var scope = app.Services.CreateAsyncScope())
             "Id" uuid PRIMARY KEY,
             "Name" text NOT NULL,
             "Artist" text NOT NULL,
+            "Genre" text NULL,
             "Year" integer NULL,
             "CoverObjectKey" text NULL,
             "OwnerId" uuid NOT NULL,
@@ -138,8 +139,11 @@ await using (var scope = app.Services.CreateAsyncScope())
             "FileName" text NOT NULL,
             "ObjectKey" text NOT NULL,
             "ContentType" text NOT NULL,
-            "Size" bigint NOT NULL
+            "Size" bigint NOT NULL,
+            "Duration" double precision NULL
         );
+        ALTER TABLE "Albums" ADD COLUMN IF NOT EXISTS "Genre" text NULL;
+        ALTER TABLE "AlbumTracks" ADD COLUMN IF NOT EXISTS "Duration" double precision NULL;
         CREATE INDEX IF NOT EXISTS "IX_AlbumTracks_AlbumId" ON "AlbumTracks" ("AlbumId");
         """);
 }

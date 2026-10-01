@@ -15,8 +15,9 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
 {
     private static readonly HashSet<string> AudioExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".mp3", ".wav", ".flac", ".ogg"
+        ".mp3", ".flac", ".opus"
     };
+    private const long MaxTrackSize = 100 * 1024 * 1024;
 
     [HttpGet("albums")]
     [AllowAnonymous]
@@ -46,6 +47,7 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
     [HttpPost("upload-album")]
     [Authorize]
     [RequestSizeLimit(500_000_000)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 500_000_000)]
     public async Task<IActionResult> CreateAlbum([FromForm] CreateAlbumRequest request, CancellationToken cancellationToken)
     {
         var name = request.Name.Trim();
@@ -61,10 +63,16 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         }
 
         var invalidTrack = request.Tracks.FirstOrDefault(track =>
-            track.Length == 0 || track.Length > 150_000_000 || !AudioExtensions.Contains(Path.GetExtension(track.FileName)));
+            track.Length == 0 || track.Length > MaxTrackSize || !AudioExtensions.Contains(Path.GetExtension(track.FileName)));
         if (invalidTrack is not null)
         {
-            return BadRequest(new { message = $"Недопустимый аудиофайл: {Path.GetFileName(invalidTrack.FileName)}." });
+            return BadRequest(new { message = $"Недопустимый аудиофайл: {Path.GetFileName(invalidTrack.FileName)}. Разрешены MP3, FLAC и OPUS до 100 МБ." });
+        }
+
+        var genre = request.Genre?.Trim();
+        if (genre?.Length > 80)
+        {
+            return BadRequest(new { message = "Название жанра не должно превышать 80 символов." });
         }
 
         if (request.Cover is { Length: > 10_000_000 })
@@ -73,11 +81,15 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         }
 
         string[] titles;
+        string[] trackArtists;
         int[] orders;
+        double?[] durations;
         try
         {
             titles = JsonSerializer.Deserialize<string[]>(request.TrackTitles ?? "[]") ?? [];
+            trackArtists = JsonSerializer.Deserialize<string[]>(request.TrackArtists ?? "[]") ?? [];
             orders = JsonSerializer.Deserialize<int[]>(request.TrackOrders ?? "[]") ?? [];
+            durations = JsonSerializer.Deserialize<double?[]>(request.TrackDurations ?? "[]") ?? [];
         }
         catch (JsonException)
         {
@@ -95,6 +107,7 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
             Id = Guid.NewGuid(),
             Name = name,
             Artist = artist,
+            Genre = string.IsNullOrWhiteSpace(genre) ? null : genre,
             Year = request.Year,
             OwnerId = ownerId,
             CreatedAt = DateTimeOffset.UtcNow
@@ -122,12 +135,17 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
                 Title = index < titles.Length && !string.IsNullOrWhiteSpace(titles[index])
                     ? titles[index].Trim()
                     : Path.GetFileNameWithoutExtension(fileName),
-                Artist = artist,
+                Artist = index < trackArtists.Length && !string.IsNullOrWhiteSpace(trackArtists[index])
+                    ? trackArtists[index].Trim()
+                    : artist,
                 Order = index < orders.Length && orders[index] > 0 ? orders[index] : index + 1,
                 FileName = fileName,
                 ObjectKey = objectKey,
                 ContentType = file.ContentType,
-                Size = file.Length
+                Size = file.Length,
+                Duration = index < durations.Length && durations[index] is { } duration && double.IsFinite(duration) && duration > 0
+                    ? duration
+                    : null
             });
         }
 
@@ -236,6 +254,7 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         id = album.Id,
         name = album.Name,
         artist = album.Artist,
+        genre = album.Genre,
         year = album.Year,
         coverUrl = album.CoverObjectKey is null ? null : $"/api/albums/{album.Id}/cover",
         trackCount = album.Tracks.Count,
@@ -249,7 +268,8 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         artist = track.Artist,
         url = $"/api/tracks/{track.Id}/file",
         order = track.Order,
-        size = track.Size
+        size = track.Size,
+        duration = track.Duration
     };
 }
 
@@ -257,9 +277,12 @@ public sealed class CreateAlbumRequest
 {
     public string Name { get; set; } = string.Empty;
     public string Artist { get; set; } = string.Empty;
+    public string? Genre { get; set; }
     public int? Year { get; set; }
     public IFormFile? Cover { get; set; }
     public List<IFormFile> Tracks { get; set; } = [];
     public string? TrackTitles { get; set; }
+    public string? TrackArtists { get; set; }
+    public string? TrackDurations { get; set; }
     public string? TrackOrders { get; set; }
 }

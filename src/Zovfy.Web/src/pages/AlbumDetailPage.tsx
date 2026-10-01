@@ -229,6 +229,7 @@ export function AlbumDetailPage({
             <p className="album-details">
               <span className="artist-link">{album.artist}</span>
               {album.year ? <> · {album.year}</> : null}
+              {album.genre ? <> · {album.genre}</> : null}
               {" · "}
               {tracks.length} {trackWord(tracks.length)}
               {" · "}
