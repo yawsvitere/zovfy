@@ -1,0 +1,384 @@
+.album-edit-backdrop {
+  position: fixed;
+  z-index: 4200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(0 0 0 / 76%);
+  backdrop-filter: blur(9px);
+}
+
+.album-edit-modal {
+  display: flex;
+  width: min(880px, 100%);
+  max-height: min(92vh, 960px);
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--text-color);
+  background: #191a19;
+  border: 1px solid #3a3c3a;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 55%);
+}
+
+.album-edit-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.album-edit-header span {
+  color: var(--text-lighter);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.album-edit-header h2 {
+  margin: 3px 0 0;
+  font-size: 18px;
+}
+
+.album-edit-header > button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  place-items: center;
+  color: var(--text-light);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.album-edit-header > button:hover {
+  color: var(--primary-pink);
+  background: var(--soft-pink);
+}
+
+.album-edit-form {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.album-edit-fields {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.album-edit-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 0.8fr);
+  gap: 12px;
+}
+
+.album-edit-fields label,
+.album-edit-track-fields label,
+.album-edit-lyrics label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--text-light);
+  font-size: 11px;
+}
+
+.album-edit-fields input:not([type="file"]),
+.album-edit-track-fields input,
+.album-edit-lyrics textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--text-color);
+  background: #101110;
+  border: 1px solid #3b3d3b;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.album-edit-fields input:focus,
+.album-edit-track-fields input:focus,
+.album-edit-lyrics textarea:focus {
+  border-color: var(--primary-pink);
+}
+
+.album-edit-file-label,
+.album-edit-audio-label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-lighter);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.album-edit-file-label input,
+.album-edit-audio-label input,
+.album-edit-add-track input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.album-edit-tracks-heading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px 10px;
+}
+
+.album-edit-tracks-heading > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.album-edit-tracks-heading h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.album-edit-tracks-heading span {
+  color: var(--text-lighter);
+  font-size: 11px;
+}
+
+.album-edit-add-track {
+  position: relative;
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--text-color);
+  background: #252725;
+  border: 1px solid #414341;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.album-edit-add-track:hover {
+  color: var(--primary-pink);
+  border-color: var(--primary-pink);
+}
+
+.album-edit-track-list {
+  display: grid;
+  min-height: 0;
+  gap: 10px;
+  padding: 4px 20px 18px;
+  overflow: auto;
+}
+
+.album-edit-track {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 11px;
+  margin: 0;
+  padding: 13px;
+  background: #202220;
+  border: 1px solid #373a37;
+  border-radius: 5px;
+}
+
+.album-edit-track legend {
+  padding: 0 5px;
+  color: var(--text-lighter);
+  font-size: 10px;
+}
+
+.album-edit-remove-track {
+  position: absolute;
+  top: 4px;
+  right: 7px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--text-lighter);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.album-edit-remove-track:hover {
+  color: #ff9292;
+  background: rgb(255 100 100 / 10%);
+}
+
+.album-edit-track-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) 64px 90px;
+  gap: 9px;
+  padding-right: 22px;
+}
+
+.album-edit-duration {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: var(--text-light);
+  font-size: 11px;
+}
+
+.album-edit-duration output {
+  display: flex;
+  min-height: 35px;
+  align-items: center;
+  color: var(--text-color);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.album-edit-audio-label {
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.album-edit-lyrics {
+  border-top: 1px solid #383a38;
+}
+
+.album-edit-lyrics summary {
+  width: fit-content;
+  padding-top: 9px;
+  color: var(--text-light);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.album-edit-lyrics > label {
+  margin-top: 10px;
+}
+
+.album-edit-lyrics textarea {
+  resize: vertical;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 11px;
+}
+
+.album-edit-error {
+  margin: 12px 20px 0;
+  padding: 9px 11px;
+  color: #ffb2ad;
+  background: rgb(175 54 54 / 13%);
+  border: 1px solid rgb(255 125 125 / 24%);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.album-edit-footer {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 9px;
+  padding: 13px 20px;
+  background: #191a19;
+  border-top: 1px solid var(--line);
+}
+
+.album-edit-cancel,
+.album-edit-save {
+  min-height: 37px;
+  padding: 0 13px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.album-edit-cancel {
+  color: var(--text-light);
+  background: transparent;
+  border: 1px solid #444744;
+}
+
+.album-edit-save {
+  color: #171717;
+  background: var(--primary-pink);
+  border: 1px solid var(--primary-pink);
+  font-weight: 650;
+}
+
+.album-edit-save:disabled,
+.album-edit-cancel:disabled,
+.album-edit-header > button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 600px) {
+  .album-edit-backdrop {
+    padding: 8px;
+  }
+
+  .album-edit-modal {
+    max-height: 96dvh;
+  }
+
+  .album-edit-header,
+  .album-edit-fields,
+  .album-edit-footer {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .album-edit-field-row {
+    grid-template-columns: minmax(0, 1fr) 82px;
+  }
+
+  .album-edit-field-row label:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .album-edit-tracks-heading {
+    padding-right: 13px;
+    padding-left: 13px;
+  }
+
+  .album-edit-track-list {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  .album-edit-track-fields {
+    grid-template-columns: minmax(0, 1fr) 62px;
+    padding-right: 22px;
+  }
+
+  .album-edit-track-fields > :nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .album-edit-track-fields > :nth-child(3) {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .album-edit-track-fields > :nth-child(4) {
+    grid-column: 2;
+    grid-row: 3;
+  }
+}

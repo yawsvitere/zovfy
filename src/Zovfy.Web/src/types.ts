@@ -20,6 +20,7 @@ export type Album = {
   genre?: string;
   coverUrl?: string;
   trackCount?: number;
+  canEdit?: boolean;
   tracks?: Track[];
 };
 export type AlbumDetailsResponse = { album: Album; tracks?: Track[] };

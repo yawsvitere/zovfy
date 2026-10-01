@@ -9,6 +9,7 @@ import {
   Heart,
   MoreVertical,
   Music2,
+  Pencil,
   Pause,
   Play,
   Plus,
@@ -16,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { getArtist, updateLike } from "../api";
+import { AlbumEditModal } from "../components/AlbumEditModal";
 import type { Album, Track } from "../types";
 import "../styles/album-cards.css";
 import "../styles/album-detail.css";
@@ -31,6 +33,7 @@ type Props = {
   onBack: () => void;
   onOpenAlbum: (album: Album) => void;
   onOpenArtist: (name: string) => void;
+  onUpdateAlbum: (id: string, formData: FormData) => Promise<void>;
 };
 
 function readSavedIds(key: string) {
@@ -77,10 +80,12 @@ export function AlbumDetailPage({
   onBack,
   onOpenAlbum,
   onOpenArtist,
+  onUpdateAlbum,
 }: Props) {
   const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
   const [visibleMenuId, setVisibleMenuId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -368,6 +373,17 @@ export function AlbumDetailPage({
           >
             <Download size={16} />
           </button>
+          {album.canEdit && (
+            <button
+              className="album-icon-btn edit-album-btn"
+              type="button"
+              aria-label="Редактировать альбом"
+              title="Редактировать альбом"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil size={17} />
+            </button>
+          )}
         </div>
 
         <section className="track-list" aria-label="Треки альбома">
@@ -424,7 +440,9 @@ export function AlbumDetailPage({
                       {track.artist || album.artist}
                     </span>
                   </div>
-                  <div className="track-playcount">0</div>
+                  <div className="track-playcount">
+                    {(track.playCount ?? 0).toLocaleString("ru-RU")}
+                  </div>
                   <div
                     className="track-right"
                     onClick={(event) => event.stopPropagation()}
@@ -508,6 +526,14 @@ export function AlbumDetailPage({
             />
           </div>
         </div>
+      )}
+
+      {editOpen && (
+        <AlbumEditModal
+          album={album}
+          onClose={() => setEditOpen(false)}
+          onSave={(formData) => onUpdateAlbum(album.id, formData)}
+        />
       )}
 
       {visibleRecommendations.length > 0 && (

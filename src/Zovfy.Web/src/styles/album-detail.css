@@ -759,7 +759,7 @@
   .album-hero > .album-info {
     position: relative;
     width: 100%;
-    padding: 2px 108px 0 5px;
+    padding: 2px 5px 0;
   }
   .album-title {
     font-size: 32px;
@@ -768,12 +768,11 @@
     font-size: 13px;
   }
   .album-actions {
-    position: absolute;
-    top: 50%;
-    right: 4px;
+    position: static;
+    flex-wrap: wrap;
     gap: 8px;
-    margin: 0;
-    transform: translateY(-50%);
+    margin: 16px 0 0;
+    transform: none;
   }
   .play-all-btn {
     min-width: 44px;
@@ -792,7 +791,7 @@
   }
   .track-header,
   .track-row {
-    grid-template-columns: 38px minmax(0, 1fr) 0 76px;
+    grid-template-columns: 38px minmax(0, 1fr) 48px 76px;
   }
   .track-header {
     padding: 8px 0 10px;
@@ -803,7 +802,20 @@
   }
   .track-header > span:nth-child(3),
   .track-playcount {
-    display: none;
+    display: block;
+    grid-column: 3;
+    font-size: 10px;
+    text-align: center;
+  }
+  .track-header > span:nth-child(3) {
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .track-playcount {
+    justify-self: center;
   }
   .track-header > span:last-child {
     grid-column: 4;
@@ -857,7 +869,7 @@
     font-size: 12px;
   }
   .album-hero > .album-info {
-    padding-right: 91px;
+    padding-right: 5px;
   }
   .album-actions {
     right: 0;
@@ -865,7 +877,7 @@
   }
   .track-header,
   .track-row {
-    grid-template-columns: 31px minmax(0, 1fr) 0 68px;
+    grid-template-columns: 31px minmax(0, 1fr) 42px 68px;
   }
   .track-row {
     padding: 8px 0;

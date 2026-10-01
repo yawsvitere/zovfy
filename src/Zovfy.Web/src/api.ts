@@ -20,9 +20,13 @@ export async function loadAlbums(): Promise<Album[]> {
   );
 }
 
-export async function getAlbum(id: string): Promise<Album> {
+export async function getAlbum(
+  id: string,
+  accessToken?: string | null,
+): Promise<Album> {
   const result = await parseResponse<AlbumDetailsResponse>(
     await fetch(`/api/album/${encodeURIComponent(id)}`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       credentials: "include",
     }),
   );
@@ -30,6 +34,21 @@ export async function getAlbum(id: string): Promise<Album> {
     ...result.album,
     tracks: result.tracks ?? result.album.tracks ?? [],
   };
+}
+
+export async function updateAlbum(
+  id: string,
+  formData: FormData,
+  accessToken: string,
+): Promise<void> {
+  await parseResponse<{ ok: boolean }>(
+    await fetch(`/api/album/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: formData,
+      headers: { Authorization: `Bearer ${accessToken}` },
+      credentials: "include",
+    }),
+  );
 }
 
 export async function createAlbum(

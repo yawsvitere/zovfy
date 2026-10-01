@@ -6,6 +6,7 @@ import {
   getAlbum,
   loadAlbums,
   loadMyLikes,
+  updateAlbum,
   updateArtist,
 } from "./api";
 import { AudioPlayer } from "./components/AudioPlayer";
@@ -155,7 +156,7 @@ function App() {
     setLoadingDetail(true);
     setError("");
     try {
-      setSelectedAlbum(await getAlbum(album.id));
+      setSelectedAlbum(await getAlbum(album.id, accessToken));
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "Не удалось открыть альбом.",
@@ -163,6 +164,29 @@ function App() {
     } finally {
       setLoadingDetail(false);
     }
+  }
+
+  async function saveAlbum(id: string, formData: FormData) {
+    if (!accessToken)
+      throw new Error("Войдите в аккаунт, чтобы редактировать альбом.");
+    await updateAlbum(id, formData, accessToken);
+    const updated = await getAlbum(id, accessToken);
+    setSelectedAlbum(updated);
+    setAlbums((current) =>
+      current.map((album) =>
+        album.id === updated.id
+          ? {
+              ...album,
+              name: updated.name,
+              artist: updated.artist,
+              genre: updated.genre,
+              year: updated.year,
+              coverUrl: updated.coverUrl,
+              trackCount: updated.trackCount,
+            }
+          : album,
+      ),
+    );
   }
 
   async function submitAlbum(formData: FormData) {
@@ -296,6 +320,7 @@ function App() {
               onBack={() => navigate("albums")}
               onOpenAlbum={openAlbum}
               onOpenArtist={openArtist}
+              onUpdateAlbum={saveAlbum}
             />
           )}
           {screen === "artist" && (
