@@ -17,81 +17,313 @@ button:disabled {
 
 .music-sidebar {
   position: fixed;
-  inset: 0 auto 0 0;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 30;
   display: flex;
-  width: 230px;
   flex-direction: column;
-  padding: 24px 16px;
+  width: 78px;
+  padding: 15px 0;
+  gap: 8px;
+  overflow-x: hidden;
+  background: transparent;
+  border-right: none;
+  transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.28s ease,
+    border-color 0.28s ease;
+}
+
+.music-sidebar.expanded {
+  width: 258px;
   background: var(--bg-color);
   border-right: 1px solid var(--line);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(6px);
+}
+
+.music-sidebar-header {
+  padding: 0 12px;
 }
 
 .music-brand {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
   gap: 9px;
-  padding: 6px 8px 24px;
-  background: none;
   border: 0;
+  background: transparent;
+  color: var(--ink);
   font-size: 21px;
   font-weight: 750;
   cursor: pointer;
+}
+
+.music-sidebar.expanded .music-brand {
+  justify-content: flex-start;
+  padding: 0 8px;
 }
 
 .music-brand svg {
   color: var(--accent);
 }
 
-.music-nav {
-  display: grid;
-  gap: 5px;
+.brand-text {
+  display: none;
+  white-space: nowrap;
 }
 
-.music-nav button {
+.music-sidebar.expanded .brand-text {
+  display: inline;
+}
+
+.music-nav {
+  display: grid;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.music-nav button,
+.music-playlist {
+  position: relative;
   display: flex;
-  min-height: 42px;
   align-items: center;
-  gap: 11px;
-  padding: 0 11px;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
   color: var(--text-light);
   text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .music-nav button:hover,
-.music-nav button.active {
-  color: var(--accent);
-  background: var(--soft-pink);
+.music-nav button.active,
+.music-playlist:hover,
+.music-playlist.liked:hover {
+  background: var(--bg-secondary);
+  color: var(--text-color);
 }
 
-.music-sidebar-foot {
-  margin-top: auto;
-  padding: 12px 8px;
-  color: var(--text-lighter);
+.music-nav button.active::before,
+.music-playlist.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 28px;
+  background: var(--accent);
+}
+
+.nav-icon,
+.mini-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.nav-text,
+.playlist-info {
+  display: none;
+  min-width: 0;
+}
+
+.music-sidebar.expanded .nav-text,
+.music-sidebar.expanded .playlist-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 1;
+}
+
+.music-sidebar:not(.expanded) .music-nav button,
+.music-sidebar:not(.expanded) .music-playlist {
+  justify-content: center;
+  padding: 0;
+}
+
+.music-sidebar:not(.expanded) .music-nav button::after,
+.music-sidebar:not(.expanded) .music-playlist::after {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  z-index: 50;
+  transform: translateY(-50%);
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-color);
+  content: attr(data-tooltip);
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
-.music-main {
+.music-sidebar:not(.expanded) .music-nav button:hover::after,
+.music-sidebar:not(.expanded) .music-playlist:hover::after {
+  opacity: 1;
+}
+
+.music-playlist-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px;
+  margin-top: 8px;
+  overflow-y: auto;
+}
+
+.music-playlist-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.music-playlist {
+  gap: 10px;
+  min-height: 54px;
+}
+
+.playlist-cover {
+  display: block;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.playlist-liked,
+.playlist-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f96db7, #7e5cff);
+  color: white;
+  font-weight: 700;
+}
+
+.playlist-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.playlist-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-type {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(243, 244, 246, 0.7);
+}
+
+.mini-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: var(--bg-color);
+  background: var(--accent);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.music-playlist:hover .mini-play-btn {
+  opacity: 1;
+}
+
+.music-sidebar:not(.expanded) .playlist-info,
+.music-sidebar:not(.expanded) .mini-play-btn,
+.music-sidebar:not(.expanded) .brand-text {
+  display: none;
+}
+
+.music-sidebar:not(.expanded) .playlist-cover {
+  width: 38px;
+  height: 38px;
+}
+
+.music-sidebar + .music-main {
   min-height: 100vh;
-  margin-left: 230px;
+
   overflow-x: clip;
+  transition: margin-left 0.28s ease;
+}
+
+.music-sidebar.expanded + .music-main {
+  margin-left: 258px;
 }
 
 .music-header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 2;
+  left: 78px;
+  right: 0;
+  z-index: 20;
   display: flex;
-  min-height: 72px;
+  min-height: 60px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 18px;
-  padding: 12px clamp(20px, 4vw, 54px);
-  background: var(--bg-color);
-  border-bottom: 1px solid var(--line);
+  padding: 8px clamp(20px, 4vw, 54px);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
+  transition:
+    background-color 0.2s ease,
+    backdrop-filter 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.music-header.scrolled {
+  background: rgba(15, 15, 17, 0.34);
+  backdrop-filter: blur(7px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.music-sidebar.expanded + .music-main .music-header {
+  left: 258px;
+}
+
+.music-header-spacer {
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
 }
 
 .music-heading {
@@ -181,7 +413,7 @@ button:disabled {
 .music-content {
   width: min(100%, 1320px);
   margin: 0 auto;
-  padding: 30px clamp(20px, 4vw, 54px) 140px;
+  padding: 90px clamp(20px, 4vw, 54px) 140px;
 }
 
 .loading-state,
@@ -253,7 +485,7 @@ button:disabled {
 }
 
 @media (max-width: 760px) {
-.music-sidebar {
+  .music-sidebar {
     position: static;
     width: 100%;
     height: auto;
@@ -261,44 +493,44 @@ button:disabled {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
-.music-brand {
+  .music-brand {
     padding: 3px 4px 10px;
   }
-.music-nav {
+  .music-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-.music-nav button {
+  .music-nav button {
     justify-content: center;
     gap: 7px;
     padding: 0 5px;
     font-size: 12px;
   }
-.music-sidebar-foot {
+  .music-sidebar-foot {
     display: none;
   }
-.music-main {
+  .music-main {
     margin-left: 0;
   }
-.music-header {
+  .music-header {
     min-height: 60px;
     padding: 10px 16px;
   }
-.music-heading h1 {
+  .music-heading h1 {
     font-size: 18px;
   }
-.music-content {
-  padding: 20px 16px 130px;
+  .music-content {
+    padding: 80px 16px 130px;
   }
 }
 
 @media (max-width: 480px) {
-.music-nav button {
+  .music-nav button {
     flex-direction: column;
     gap: 3px;
     font-size: 10px;
   }
-.primary-button,
-.secondary-button {
+  .primary-button,
+  .secondary-button {
     min-height: 36px;
     padding: 0 9px;
     font-size: 11px;

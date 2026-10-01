@@ -1,9 +1,10 @@
 .zovfy-player {
   position: fixed;
   z-index: 1100;
-  right: 16px;
+  left: 50%;
   bottom: 12px;
-  left: 246px;
+  width: min(1600px, calc(100vw - 32px));
+  transform: translateX(-50%);
   display: grid;
   min-height: 78px;
   grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.35fr) minmax(
@@ -130,10 +131,18 @@
 
 .zovfy-play-button,
 .zovfy-fullscreen-play {
-  width: 42px;
-  height: 42px;
   color: #111;
   background: #f5f4ef;
+}
+
+.zovfy-play-button {
+  width: 38px;
+  height: 38px;
+}
+
+.zovfy-fullscreen-play {
+  width: 42px;
+  height: 42px;
 }
 
 .zovfy-play-button:hover,
@@ -208,8 +217,10 @@
   justify-content: flex-end;
   gap: 8px;
 }
-.zovfy-player-extra .zovfy-volume {
-  width: 78px;
+.zovfy-player-extra input.zovfy-volume {
+  width: 110px;
+  min-width: 80px;
+  flex: 0 1 110px;
 }
 .zovfy-repeat-one {
   margin-left: -12px;
@@ -565,8 +576,8 @@
 @media (max-width: 1000px) {
   .zovfy-player {
     grid-template-columns: minmax(150px, 1fr) minmax(220px, 1.3fr) minmax(
-        112px,
-        0.7fr
+        220px,
+        0.9fr
       );
     gap: 10px;
     padding-inline: 12px;
@@ -574,8 +585,10 @@
   .zovfy-player-extra {
     gap: 2px;
   }
-  .zovfy-player-extra .zovfy-volume {
-    width: 55px;
+  .zovfy-player-extra input.zovfy-volume {
+    width: 88px;
+    min-width: 70px;
+    flex-basis: 88px;
   }
 }
 
@@ -584,6 +597,8 @@
     right: 10px;
     bottom: 10px;
     left: 10px;
+    width: auto;
+    transform: none;
     min-height: 92px;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 5px 8px;

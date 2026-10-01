@@ -126,7 +126,7 @@ function App() {
 
   return (
     <div className="music-app">
-      <AlbumSidebar screen={screen} onNavigate={navigate} />
+      <AlbumSidebar albums={albums} screen={screen} onNavigate={navigate} />
       <main className="music-main">
         <AlbumHeader
           title={title}

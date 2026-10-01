@@ -1,14 +1,18 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Disc3,
+  Download,
   Heart,
   MoreVertical,
   Music2,
   Pause,
   Play,
   Plus,
+  Shuffle,
   X,
 } from "lucide-react";
 import type { Album, Track } from "../types";
@@ -75,6 +79,9 @@ export function AlbumDetailPage({
   const [visibleMenuId, setVisibleMenuId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const recommendationsRef = useRef<HTMLDivElement | null>(null);
   const [likedAlbums, setLikedAlbums] = useState(() =>
     readSavedIds("zovfy.likedAlbums"),
   );
@@ -117,6 +124,52 @@ export function AlbumDetailPage({
     return () => document.removeEventListener("click", onDocumentClick);
   }, [visibleMenuId]);
 
+  function scrollRecommendations(direction: 1 | -1) {
+    const node = recommendationsRef.current;
+    if (!node) return;
+    const amount = Math.max(node.clientWidth * 0.8, 260);
+    node.scrollBy({ left: direction * amount, behavior: "smooth" });
+  }
+
+  const tracks = album?.tracks ?? [];
+  const recommended = albums.filter((item) => item?.id !== album?.id);
+  const sameArtist = recommended.filter(
+    (item) => item.artist === album?.artist,
+  );
+  const visibleRecommendations = (
+    sameArtist.length ? sameArtist : recommended
+  ).slice(0, 8);
+  const totalDuration = tracks.reduce(
+    (total, track, index) =>
+      total + (track.duration ?? durations[trackKey(track, index)] ?? 0),
+    0,
+  );
+  const albumLiked = album ? likedAlbums.has(album.id) : false;
+
+  useEffect(() => {
+    const element = recommendationsRef.current;
+    if (!element) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      return;
+    }
+
+    const updateState = () => {
+      const maxScrollLeft = element.scrollWidth - element.clientWidth;
+      setCanScrollLeft(element.scrollLeft > 8);
+      setCanScrollRight(element.scrollLeft < maxScrollLeft - 8);
+    };
+
+    updateState();
+    element.addEventListener("scroll", updateState, { passive: true });
+    window.addEventListener("resize", updateState);
+
+    return () => {
+      element.removeEventListener("scroll", updateState);
+      window.removeEventListener("resize", updateState);
+    };
+  }, [visibleRecommendations.length]);
+
   if (loading) return <div className="loading-state">Загружаю альбом…</div>;
   if (!album)
     return (
@@ -127,19 +180,6 @@ export function AlbumDetailPage({
         </button>
       </div>
     );
-
-  const tracks = album.tracks ?? [];
-  const recommended = albums.filter((item) => item.id !== album.id);
-  const sameArtist = recommended.filter((item) => item.artist === album.artist);
-  const visibleRecommendations = (
-    sameArtist.length ? sameArtist : recommended
-  ).slice(0, 8);
-  const totalDuration = tracks.reduce(
-    (total, track, index) =>
-      total + (track.duration ?? durations[trackKey(track, index)] ?? 0),
-    0,
-  );
-  const albumLiked = likedAlbums.has(album.id);
 
   function saveLikes(
     key: string,
@@ -235,34 +275,6 @@ export function AlbumDetailPage({
               {" · "}
               {formatTotalDuration(totalDuration)}
             </p>
-            <div className="album-actions">
-              <button
-                className="play-all-btn"
-                onClick={() => tracks[0] && playTrack(tracks[0], 0)}
-                disabled={!tracks.length}
-              >
-                {isPlaying && tracks[0]?.id === currentTrackId ? (
-                  <Pause size={17} fill="currentColor" />
-                ) : (
-                  <Play size={17} fill="currentColor" />
-                )}
-                <span className="btn-label">
-                  {isPlaying && tracks[0]?.id === currentTrackId
-                    ? "Пауза"
-                    : "Слушать"}
-                </span>
-              </button>
-              <button
-                className={`like-album-btn${albumLiked ? " liked" : ""}`}
-                onClick={() => toggleAlbumLike(album.id)}
-                aria-label={
-                  albumLiked ? "Убрать лайк с альбома" : "Лайкнуть альбом"
-                }
-                aria-pressed={albumLiked}
-              >
-                <Heart size={19} fill={albumLiked ? "currentColor" : "none"} />
-              </button>
-            </div>
           </div>
         </header>
 
@@ -274,6 +286,55 @@ export function AlbumDetailPage({
             </button>
           </p>
         )}
+
+        <div className="album-actions album-track-controls">
+          <button
+            className="play-all-btn compact-icon-btn"
+            onClick={() => tracks[0] && playTrack(tracks[0], 0)}
+            disabled={!tracks.length}
+            aria-label={
+              isPlaying && tracks[0]?.id === currentTrackId
+                ? "Пауза"
+                : "Воспроизвести"
+            }
+          >
+            {isPlaying && tracks[0]?.id === currentTrackId ? (
+              <Pause size={17} fill="currentColor" />
+            ) : (
+              <Play size={17} fill="currentColor" />
+            )}
+            <span className="btn-label">
+              {isPlaying && tracks[0]?.id === currentTrackId
+                ? "Пауза"
+                : "Слушать"}
+            </span>
+          </button>
+          <button
+            className="album-icon-btn shuffle-album-btn"
+            type="button"
+            aria-label="Перемешать"
+          >
+            <Shuffle size={16} />
+          </button>
+          <button
+            className={`album-icon-btn like-album-btn${albumLiked ? " liked" : ""}`}
+            onClick={() => toggleAlbumLike(album.id)}
+            aria-label={
+              albumLiked ? "Убрать лайк с альбома" : "Лайкнуть альбом"
+            }
+            aria-pressed={albumLiked}
+            type="button"
+          >
+            <Heart size={18} fill={albumLiked ? "currentColor" : "none"} />
+          </button>
+          <button
+            className="album-icon-btn download-album-btn"
+            type="button"
+            aria-label="Скачать альбом"
+          >
+            <Download size={16} />
+          </button>
+        </div>
 
         <section className="track-list" aria-label="Треки альбома">
           <div className="track-header">
@@ -423,7 +484,16 @@ export function AlbumDetailPage({
               : "Рекомендуем также"}
           </h3>
           <div className="carousel-container">
-            <div className="carousel-track">
+            {canScrollLeft && (
+              <button
+                className="carousel-arrow carousel-arrow-left"
+                onClick={() => scrollRecommendations(-1)}
+                aria-label="Назад"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            )}
+            <div className="carousel-track" ref={recommendationsRef}>
               {visibleRecommendations.map((item) => (
                 <article className="album-card" key={item.id}>
                   <button
@@ -461,6 +531,15 @@ export function AlbumDetailPage({
                 </article>
               ))}
             </div>
+            {canScrollRight && (
+              <button
+                className="carousel-arrow carousel-arrow-right"
+                onClick={() => scrollRecommendations(1)}
+                aria-label="Вперед"
+              >
+                <ChevronRight size={18} />
+              </button>
+            )}
           </div>
         </section>
       )}

@@ -693,7 +693,7 @@ button:disabled {
   height: 48px;
   place-items: center;
   color: var(--text-light);
-  background: var(--bg-color);
+
   border: 2px solid var(--soft-pink);
   border-radius: 50%;
   cursor: pointer;
