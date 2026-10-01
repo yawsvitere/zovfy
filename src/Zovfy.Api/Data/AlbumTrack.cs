@@ -13,4 +13,7 @@ public sealed class AlbumTrack
     public string ContentType { get; set; } = string.Empty;
     public long Size { get; set; }
     public double? Duration { get; set; }
+    public string? LyricsLrc { get; set; }
+    public string? LyricsTtml { get; set; }
+    public long PlayCount { get; set; }
 }

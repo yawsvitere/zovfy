@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { authenticate, createAlbum, getAlbum, loadAlbums } from "./api";
+import {
+  authenticate,
+  createAlbum,
+  getAlbum,
+  loadAlbums,
+  loadMyLikes,
+} from "./api";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { AlbumHeader } from "./components/AlbumHeader";
 import { AlbumSidebar } from "./components/AlbumSidebar";
@@ -50,6 +56,28 @@ function App() {
   useEffect(() => {
     void refreshAlbums();
   }, []);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let active = true;
+    void loadMyLikes(accessToken)
+      .then((likes) => {
+        if (!active) return;
+        localStorage.setItem(
+          "zovfy.likedAlbums",
+          JSON.stringify(likes.albums.map((album) => album.id)),
+        );
+        localStorage.setItem(
+          "zovfy.likedTracks",
+          JSON.stringify(likes.tracks.map((track) => track.id)),
+        );
+        window.dispatchEvent(new Event("zovfy:likes-changed"));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
     function updateAudioLevel(event: Event) {

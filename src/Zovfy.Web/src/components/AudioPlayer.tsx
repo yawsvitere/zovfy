@@ -15,10 +15,19 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { recordListening, updateLike } from "../api";
 import type { Track } from "../types";
 import "../styles/player.css";
 
 type PlayRequest = { track: Track; queue: Track[]; requestId: number };
+type PlaybackSession = {
+  trackId: string;
+  id: string;
+  elapsed: number;
+  lastTime: number | null;
+  counted: boolean;
+  sending: boolean;
+};
 
 type Props = {
   onTrackChange: (track: Track | null) => void;
@@ -58,6 +67,7 @@ export function AudioPlayer({
   const analyzerRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const currentTrackRef = useRef<Track | null>(null);
+  const playbackSessionRef = useRef<PlaybackSession | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const previousVolume = useRef(0.75);
   const [track, setTrack] = useState<Track | null>(null);
@@ -189,6 +199,16 @@ export function AudioPlayer({
 
   useEffect(() => {
     onTrackChange(track);
+    playbackSessionRef.current = track?.id
+      ? {
+          trackId: track.id,
+          id: crypto.randomUUID(),
+          elapsed: 0,
+          lastTime: null,
+          counted: false,
+          sending: false,
+        }
+      : null;
     if (!track) return;
     setCurrentTime(0);
     setDuration(0);
@@ -294,6 +314,9 @@ export function AudioPlayer({
     else ids.add(track.id);
     localStorage.setItem("zovfy.likedTracks", JSON.stringify([...ids]));
     setLiked(ids.has(track.id));
+    void updateLike("tracks", track.id, ids.has(track.id)).catch(() =>
+      setError("Не удалось сохранить трек в аккаунте."),
+    );
     window.dispatchEvent(new Event("zovfy:likes-changed"));
   }
 
@@ -712,9 +735,35 @@ export function AudioPlayer({
       <audio
         ref={audioRef}
         preload="metadata"
-        onTimeUpdate={(event) =>
-          setCurrentTime(event.currentTarget.currentTime)
-        }
+        onSeeking={(event) => {
+          const session = playbackSessionRef.current;
+          if (session) session.lastTime = event.currentTarget.currentTime;
+        }}
+        onTimeUpdate={(event) => {
+          const time = event.currentTarget.currentTime;
+          setCurrentTime(time);
+          const session = playbackSessionRef.current;
+          if (!track?.id || session?.trackId !== track.id) return;
+          const previousTime = session.lastTime;
+          session.lastTime = time;
+          if (previousTime !== null) {
+            const elapsed = time - previousTime;
+            if (elapsed > 0 && elapsed <= 10) session.elapsed += elapsed;
+          }
+
+          const threshold = duration > 0 && duration < 30 ? duration * 0.9 : 30;
+          if (session.elapsed >= threshold && !session.counted && !session.sending) {
+            session.sending = true;
+            void recordListening(track.id, session.id)
+              .then(() => {
+                session.counted = true;
+              })
+              .catch(() => {})
+              .finally(() => {
+                session.sending = false;
+              });
+          }
+        }}
         onLoadedMetadata={(event) => {
           const nextDuration = event.currentTarget.duration;
           if (Number.isFinite(nextDuration)) {

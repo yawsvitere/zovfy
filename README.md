@@ -32,6 +32,7 @@ npm run dev
 Во время разработки frontend работает отдельно от Docker; Vite проксирует `/api` и `/hubs` на API по адресу `http://localhost:8081`.
 
 Локальные учётные данные MinIO заданы в `.env.example`. Для любой общей или production-среды замените их и `JWT_KEY`.
+Перед регистрацией первого администратора укажите его email в `ADMIN_EMAIL`; остальные новые аккаунты получают роль `User`.
 
 Остановить сервисы: `docker compose down`. Данные PostgreSQL и MinIO сохраняются в Docker volumes. Для полного удаления данных: `docker compose down -v`.
 
@@ -47,6 +48,13 @@ Frontend в контейнере доступен по адресу http://local
 
 - `POST /api/auth/register` — регистрация (`email`, `password`)
 - `POST /api/auth/login` — вход, возвращает JWT
+- `POST /api/tracks/{id}/listen` — учёт прослушивания после 30 секунд фактического воспроизведения (90% для треков короче 30 секунд)
+- `GET /api/chart` — недельный чарт, пересчитываемый каждый понедельник по событиям за последние 7 дней
+- `GET /api/artists/{name}` — профиль артиста, релизы и суммарные прослушивания
+- `PUT /api/artists/{name}` — описание, аватар и баннер артиста (Admin/Moderator)
+- `GET/PUT /api/users/me` — просмотр и обновление профиля пользователя
+- `GET /api/users/me/likes` — лайкнутые альбомы и треки
+- `/api/admin/users` — управление ролями (Admin)
 - `GET /api/health` — проверка доступности
 - `POST /api/files` — multipart-загрузка файла, требует Bearer JWT
 - `/hubs/updates` — защищённый SignalR hub, JWT передаётся как `access_token`

@@ -17,6 +17,11 @@ public sealed class AuthController(
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
     {
+        if (!new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(request.Email))
+        {
+            return BadRequest(new { message = "Укажите корректный email." });
+        }
+
         var user = new AppUser
         {
             Id = Guid.NewGuid(),
@@ -30,7 +35,9 @@ public sealed class AuthController(
             return BadRequest(new { errors = result.Errors.Select(error => error.Description) });
         }
 
-        return Ok(CreateToken(user));
+        var role = IsInitialAdmin(user.Email) ? "Admin" : "User";
+        await userManager.AddToRoleAsync(user, role);
+        return Ok(await CreateToken(user));
     }
 
     [HttpPost("login")]
@@ -42,19 +49,32 @@ public sealed class AuthController(
             return Unauthorized(new { message = "Неверный email или пароль." });
         }
 
-        return Ok(CreateToken(user));
+        var roles = await userManager.GetRolesAsync(user);
+        if (roles.Count == 0)
+        {
+            var role = IsInitialAdmin(user.Email) ? "Admin" : "User";
+            await userManager.AddToRoleAsync(user, role);
+        }
+
+        return Ok(await CreateToken(user));
     }
 
-    private AuthResponse CreateToken(AppUser user)
+    private bool IsInitialAdmin(string? email) =>
+        !string.IsNullOrWhiteSpace(configuration["ADMIN_EMAIL"]) &&
+        string.Equals(email, configuration["ADMIN_EMAIL"], StringComparison.OrdinalIgnoreCase);
+
+    private async Task<AuthResponse> CreateToken(AppUser user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
         };
+        claims.AddRange((await userManager.GetRolesAsync(user))
+            .Select(role => new Claim(ClaimTypes.Role, role)));
         var expiresAt = DateTime.UtcNow.AddHours(8);
         var token = new JwtSecurityToken(
             issuer: configuration["Jwt:Issuer"],

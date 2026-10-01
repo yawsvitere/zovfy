@@ -8,6 +8,9 @@ export type Track = {
   duration?: number | null;
   genre?: string;
   order?: number;
+  lyricsLrc?: string | null;
+  lyricsTtml?: string | null;
+  playCount?: number;
 };
 export type Album = {
   id: string;
@@ -27,4 +30,6 @@ export type PendingTrack = {
   title: string;
   artist: string;
   duration: number | null;
+  lyricsLrc: string;
+  lyricsTtml: string;
 };

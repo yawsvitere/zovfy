@@ -15,6 +15,7 @@ import {
   Shuffle,
   X,
 } from "lucide-react";
+import { updateLike } from "../api";
 import type { Album, Track } from "../types";
 import "../styles/album-cards.css";
 import "../styles/album-detail.css";
@@ -191,12 +192,14 @@ export function AlbumDetailPage({
   }
 
   function toggleAlbumLike(albumId: string) {
-    setLikedAlbums(
-      saveLikes("zovfy.likedAlbums", (current) => {
-        if (current.has(albumId)) current.delete(albumId);
-        else current.add(albumId);
-        return current;
-      }),
+    const next = saveLikes("zovfy.likedAlbums", (current) => {
+      if (current.has(albumId)) current.delete(albumId);
+      else current.add(albumId);
+      return current;
+    });
+    setLikedAlbums(next);
+    void updateLike("albums", albumId, next.has(albumId)).catch(() =>
+      setNotice("Не удалось сохранить альбом в аккаунте."),
     );
   }
 
@@ -207,6 +210,9 @@ export function AlbumDetailPage({
       return current;
     });
     setLikedTracks(next);
+    void updateLike("tracks", id, next.has(id)).catch(() =>
+      setNotice("Не удалось сохранить трек в аккаунте."),
+    );
     window.dispatchEvent(new Event("zovfy:likes-changed"));
     setVisibleMenuId(null);
   }

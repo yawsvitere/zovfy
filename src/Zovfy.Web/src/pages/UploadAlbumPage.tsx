@@ -66,6 +66,8 @@ export function UploadAlbumPage({
           title: file.name.replace(/\.[^.]+$/, ""),
           artist: "",
           duration: null,
+          lyricsLrc: "",
+          lyricsTtml: "",
         };
         try {
           const metadata = await parseBlob(file, { duration: true });
@@ -125,6 +127,14 @@ export function UploadAlbumPage({
     formData.append(
       "trackOrders",
       JSON.stringify(tracks.map((_, index) => index + 1)),
+    );
+    formData.append(
+      "trackLyricsLrc",
+      JSON.stringify(tracks.map((track) => track.lyricsLrc)),
+    );
+    formData.append(
+      "trackLyricsTtml",
+      JSON.stringify(tracks.map((track) => track.lyricsTtml)),
     );
     tracks.forEach((track) => formData.append("tracks", track.file));
     try {
@@ -279,6 +289,39 @@ export function UploadAlbumPage({
                   {track.file.name}
                   {track.duration ? ` · ${formatDuration(track.duration)}` : ""}
                 </small>
+                <details className="track-lyrics-fields">
+                  <summary>Текст песни (LRC / TTML)</summary>
+                  <textarea
+                    aria-label={`Текст LRC для трека ${index + 1}`}
+                    maxLength={1_000_000}
+                    placeholder="LRC-текст с временными метками"
+                    value={track.lyricsLrc}
+                    onChange={(event) =>
+                      setTracks((current) =>
+                        current.map((item) =>
+                          item.id === track.id
+                            ? { ...item, lyricsLrc: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                  <textarea
+                    aria-label={`Текст TTML для трека ${index + 1}`}
+                    maxLength={1_000_000}
+                    placeholder="TTML/XML текст с временными метками"
+                    value={track.lyricsTtml}
+                    onChange={(event) =>
+                      setTracks((current) =>
+                        current.map((item) =>
+                          item.id === track.id
+                            ? { ...item, lyricsTtml: event.target.value }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                </details>
                 <button
                   type="button"
                   className="remove-track"

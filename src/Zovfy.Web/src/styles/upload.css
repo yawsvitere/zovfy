@@ -207,6 +207,30 @@
   white-space: nowrap;
 }
 
+.track-lyrics-fields {
+  grid-column: 2 / 5;
+  padding: 0 8px 10px;
+}
+
+.track-lyrics-fields summary {
+  color: var(--text-light);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.track-lyrics-fields textarea {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+  margin-top: 8px;
+  padding: 8px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font: inherit;
+  font-size: 12px;
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -244,6 +268,9 @@
   }
   .pending-tracks li > input + input {
     grid-column: 2;
+  }
+  .track-lyrics-fields {
+    grid-column: 2 / -1;
   }
   .form-actions {
     flex-wrap: wrap;

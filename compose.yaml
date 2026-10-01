@@ -47,6 +47,7 @@ services:
       Jwt__Key: ${JWT_KEY:-local-development-only-change-this-secret-key-32chars}
       Jwt__Issuer: ${JWT_ISSUER:-zovfy-api}
       Jwt__Audience: ${JWT_AUDIENCE:-zovfy-web}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       Storage__Endpoint: http://minio:9000
       Storage__Bucket: ${MINIO_BUCKET:-zovfy-files}
       Storage__AccessKey: ${MINIO_ROOT_USER:-minioadmin}

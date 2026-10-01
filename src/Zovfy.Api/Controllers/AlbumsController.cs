@@ -28,7 +28,7 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
             .OrderByDescending(album => album.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return Ok(albums.Select(ToResponse));
+        return Ok(albums.Select(album => ToResponse(album, includeTrackLyrics: false)));
     }
 
     [HttpGet("album/{id:guid}")]
@@ -41,7 +41,12 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
 
         return album is null
             ? NotFound(new { message = "Альбом не найден." })
-            : Ok(new { album = ToResponse(album), tracks = album.Tracks.OrderBy(track => track.Order).Select(ToTrackResponse) });
+            : Ok(new
+            {
+                album = ToResponse(album),
+                tracks = album.Tracks.OrderBy(track => track.Order)
+                    .Select(track => ToTrackResponse(track, includeLyrics: true))
+            });
     }
 
     [HttpPost("upload-album")]
@@ -84,16 +89,25 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         string[] trackArtists;
         int[] orders;
         double?[] durations;
+        string?[] lyricsLrc;
+        string?[] lyricsTtml;
         try
         {
             titles = JsonSerializer.Deserialize<string[]>(request.TrackTitles ?? "[]") ?? [];
             trackArtists = JsonSerializer.Deserialize<string[]>(request.TrackArtists ?? "[]") ?? [];
             orders = JsonSerializer.Deserialize<int[]>(request.TrackOrders ?? "[]") ?? [];
             durations = JsonSerializer.Deserialize<double?[]>(request.TrackDurations ?? "[]") ?? [];
+            lyricsLrc = JsonSerializer.Deserialize<string?[]>(request.TrackLyricsLrc ?? "[]") ?? [];
+            lyricsTtml = JsonSerializer.Deserialize<string?[]>(request.TrackLyricsTtml ?? "[]") ?? [];
         }
         catch (JsonException)
         {
             return BadRequest(new { message = "Не удалось прочитать список треков." });
+        }
+
+        if (lyricsLrc.Concat(lyricsTtml).Any(lyrics => lyrics?.Length > 1_000_000))
+        {
+            return BadRequest(new { message = "Текст песни не должен превышать 1 МБ." });
         }
 
         var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -145,6 +159,12 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
                 Size = file.Length,
                 Duration = index < durations.Length && durations[index] is { } duration && double.IsFinite(duration) && duration > 0
                     ? duration
+                    : null,
+                LyricsLrc = index < lyricsLrc.Length && !string.IsNullOrWhiteSpace(lyricsLrc[index])
+                    ? lyricsLrc[index]
+                    : null,
+                LyricsTtml = index < lyricsTtml.Length && !string.IsNullOrWhiteSpace(lyricsTtml[index])
+                    ? lyricsTtml[index]
                     : null
             });
         }
@@ -249,7 +269,7 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         }
     }
 
-    private static object ToResponse(Album album) => new
+    private static object ToResponse(Album album, bool includeTrackLyrics = true) => new
     {
         id = album.Id,
         name = album.Name,
@@ -258,19 +278,31 @@ public sealed class AlbumsController(AppDbContext database, ObjectStorageService
         year = album.Year,
         coverUrl = album.CoverObjectKey is null ? null : $"/api/albums/{album.Id}/cover",
         trackCount = album.Tracks.Count,
-        tracks = album.Tracks.OrderBy(track => track.Order).Select(ToTrackResponse)
+        tracks = album.Tracks.OrderBy(track => track.Order)
+            .Select(track => ToTrackResponse(track, includeTrackLyrics))
     };
 
-    private static object ToTrackResponse(AlbumTrack track) => new
+    private static object ToTrackResponse(AlbumTrack track, bool includeLyrics)
     {
-        id = track.Id,
-        title = track.Title,
-        artist = track.Artist,
-        url = $"/api/tracks/{track.Id}/file",
-        order = track.Order,
-        size = track.Size,
-        duration = track.Duration
-    };
+        var response = new Dictionary<string, object?>
+        {
+            ["id"] = track.Id,
+            ["title"] = track.Title,
+            ["artist"] = track.Artist,
+            ["url"] = $"/api/tracks/{track.Id}/file",
+            ["order"] = track.Order,
+            ["size"] = track.Size,
+            ["duration"] = track.Duration,
+            ["playCount"] = track.PlayCount
+        };
+        if (includeLyrics)
+        {
+            response["lyricsLrc"] = track.LyricsLrc;
+            response["lyricsTtml"] = track.LyricsTtml;
+        }
+
+        return response;
+    }
 }
 
 public sealed class CreateAlbumRequest
@@ -285,4 +317,6 @@ public sealed class CreateAlbumRequest
     public string? TrackArtists { get; set; }
     public string? TrackDurations { get; set; }
     public string? TrackOrders { get; set; }
+    public string? TrackLyricsLrc { get; set; }
+    public string? TrackLyricsTtml { get; set; }
 }

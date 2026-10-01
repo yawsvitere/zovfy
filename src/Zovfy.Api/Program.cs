@@ -74,6 +74,8 @@ builder.Services.AddSingleton<IAmazonS3>(_ =>
     return new AmazonS3Client(credentials, clientConfig);
 });
 builder.Services.AddScoped<ObjectStorageService>();
+builder.Services.AddScoped<TrackChartService>();
+builder.Services.AddHostedService<TrackChartRefreshService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -142,10 +144,61 @@ await using (var scope = app.Services.CreateAsyncScope())
             "Size" bigint NOT NULL,
             "Duration" double precision NULL
         );
+        ALTER TABLE "AlbumTracks" ADD COLUMN IF NOT EXISTS "LyricsLrc" text NULL;
+        ALTER TABLE "AlbumTracks" ADD COLUMN IF NOT EXISTS "LyricsTtml" text NULL;
+        ALTER TABLE "AlbumTracks" ADD COLUMN IF NOT EXISTS "PlayCount" bigint NOT NULL DEFAULT 0;
         ALTER TABLE "Albums" ADD COLUMN IF NOT EXISTS "Genre" text NULL;
         ALTER TABLE "AlbumTracks" ADD COLUMN IF NOT EXISTS "Duration" double precision NULL;
         CREATE INDEX IF NOT EXISTS "IX_AlbumTracks_AlbumId" ON "AlbumTracks" ("AlbumId");
+        ALTER TABLE "AspNetUsers" ADD COLUMN IF NOT EXISTS "AvatarObjectKey" text NULL;
+        ALTER TABLE "AspNetUsers" ADD COLUMN IF NOT EXISTS "BannerObjectKey" text NULL;
+        ALTER TABLE "AspNetUsers" ADD COLUMN IF NOT EXISTS "Description" text NULL;
+        CREATE TABLE IF NOT EXISTS "ListeningEvents" (
+            "Id" uuid PRIMARY KEY,
+            "PlaySessionId" uuid NOT NULL UNIQUE,
+            "TrackId" uuid NOT NULL REFERENCES "AlbumTracks" ("Id") ON DELETE CASCADE,
+            "UserId" uuid NULL REFERENCES "AspNetUsers" ("Id") ON DELETE SET NULL,
+            "PlayedAt" timestamp with time zone NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS "IX_ListeningEvents_TrackId_PlayedAt" ON "ListeningEvents" ("TrackId", "PlayedAt");
+        CREATE TABLE IF NOT EXISTS "TrackChart" (
+            "Id" uuid PRIMARY KEY,
+            "TrackId" uuid NOT NULL UNIQUE REFERENCES "AlbumTracks" ("Id") ON DELETE CASCADE,
+            "Rank" integer NOT NULL UNIQUE,
+            "PlayCount" bigint NOT NULL,
+            "WindowStart" timestamp with time zone NOT NULL,
+            "CalculatedAt" timestamp with time zone NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS "ArtistProfiles" (
+            "Id" uuid PRIMARY KEY,
+            "Name" text NOT NULL,
+            "NameKey" text NOT NULL UNIQUE,
+            "Description" text NULL,
+            "BannerObjectKey" text NULL,
+            "AvatarObjectKey" text NULL
+        );
+        CREATE TABLE IF NOT EXISTS "UserAlbumLikes" (
+            "UserId" uuid NOT NULL REFERENCES "AspNetUsers" ("Id") ON DELETE CASCADE,
+            "AlbumId" uuid NOT NULL REFERENCES "Albums" ("Id") ON DELETE CASCADE,
+            "CreatedAt" timestamp with time zone NOT NULL,
+            PRIMARY KEY ("UserId", "AlbumId")
+        );
+        CREATE TABLE IF NOT EXISTS "UserTrackLikes" (
+            "UserId" uuid NOT NULL REFERENCES "AspNetUsers" ("Id") ON DELETE CASCADE,
+            "TrackId" uuid NOT NULL REFERENCES "AlbumTracks" ("Id") ON DELETE CASCADE,
+            "CreatedAt" timestamp with time zone NOT NULL,
+            PRIMARY KEY ("UserId", "TrackId")
+        );
         """);
+
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    foreach (var roleName in new[] { "Admin", "Moderator", "User" })
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+        {
+            await roleManager.CreateAsync(new IdentityRole<Guid>(roleName));
+        }
+    }
 }
 
 await app.RunAsync();
