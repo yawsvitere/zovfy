@@ -54,6 +54,9 @@ export function AudioPlayer({
   onDurationChange,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyzerRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const currentTrackRef = useRef<Track | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const previousVolume = useRef(0.75);
@@ -69,6 +72,91 @@ export function AudioPlayer({
   const [queueOpen, setQueueOpen] = useState(false);
   const [liked, setLiked] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    let frame = 0;
+    let samples: Uint8Array<ArrayBuffer> | null = null;
+    let smoothedLevel = 0;
+
+    function stopAnalysis() {
+      cancelAnimationFrame(frame);
+      smoothedLevel = 0;
+      window.dispatchEvent(new CustomEvent("zovfy:audio-level", { detail: 0 }));
+    }
+
+    function analyze() {
+      const analyzer = analyzerRef.current;
+      const context = audioContextRef.current;
+      if (!analyzer || !context || audio!.paused) {
+        stopAnalysis();
+        return;
+      }
+
+      if (!samples || samples.length !== analyzer.frequencyBinCount) {
+        samples = new Uint8Array(analyzer.frequencyBinCount);
+      }
+      analyzer.getByteFrequencyData(samples);
+
+      const binWidth = context.sampleRate / analyzer.fftSize;
+      const firstBin = Math.ceil(165 / binWidth);
+      const lastBin = Math.floor(235 / binWidth);
+      let sum = 0;
+      for (let bin = firstBin; bin <= lastBin; bin += 1) {
+        sum += samples[bin];
+      }
+      const average = sum / Math.max(1, lastBin - firstBin + 1);
+      const targetLevel = Math.max(0, Math.min(1, (average - 165) / 130));
+      const smoothing = targetLevel > smoothedLevel ? 0.12 : 0.06;
+      smoothedLevel += (targetLevel - smoothedLevel) * smoothing;
+      window.dispatchEvent(
+        new CustomEvent("zovfy:audio-level", { detail: smoothedLevel }),
+      );
+      frame = requestAnimationFrame(analyze);
+    }
+
+    function startAnalysis() {
+      try {
+        if (!audioContextRef.current) {
+          const context = new AudioContext();
+          const analyzer = context.createAnalyser();
+          analyzer.fftSize = 2048;
+          analyzer.smoothingTimeConstant = 0.72;
+          const source = context.createMediaElementSource(audio!);
+          source.connect(analyzer);
+          analyzer.connect(context.destination);
+          audioContextRef.current = context;
+          analyzerRef.current = analyzer;
+          sourceRef.current = source;
+        }
+        void audioContextRef.current.resume().then(() => {
+          cancelAnimationFrame(frame);
+          frame = requestAnimationFrame(analyze);
+        });
+      } catch {
+        stopAnalysis();
+      }
+    }
+
+    audio.addEventListener("play", startAnalysis);
+    audio.addEventListener("pause", stopAnalysis);
+    audio.addEventListener("ended", stopAnalysis);
+    if (!audio.paused) startAnalysis();
+
+    return () => {
+      audio.removeEventListener("play", startAnalysis);
+      audio.removeEventListener("pause", stopAnalysis);
+      audio.removeEventListener("ended", stopAnalysis);
+      stopAnalysis();
+      sourceRef.current?.disconnect();
+      void audioContextRef.current?.close();
+      audioContextRef.current = null;
+      analyzerRef.current = null;
+      sourceRef.current = null;
+    };
+  }, [Boolean(track)]);
 
   useEffect(() => {
     function receivePlayRequest(event: Event) {

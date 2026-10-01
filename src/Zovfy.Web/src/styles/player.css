@@ -3,7 +3,7 @@
   z-index: 1100;
   left: 50%;
   bottom: 12px;
-  width: min(1600px, calc(100vw - 32px));
+  width: min(1400px, calc(100vw - 32px));
   transform: translateX(-50%);
   display: grid;
   min-height: 78px;
@@ -15,7 +15,9 @@
   gap: 18px;
   padding: 9px 18px;
   color: var(--text-color);
-  background: var(--bg-color);
+  background: color-mix(in srgb, var(--bg-color) 72%, transparent);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   box-shadow: 0 12px 38px rgb(0 0 0 / 34%);

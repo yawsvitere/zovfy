@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authenticate, createAlbum, getAlbum, loadAlbums } from "./api";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { AlbumHeader } from "./components/AlbumHeader";
@@ -13,6 +13,7 @@ import "./tokens.css";
 import "./styles/music-layout.css";
 
 function App() {
+  const appRef = useRef<HTMLDivElement | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
   const [albums, setAlbums] = useState<Album[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
@@ -48,6 +49,20 @@ function App() {
 
   useEffect(() => {
     void refreshAlbums();
+  }, []);
+
+  useEffect(() => {
+    function updateAudioLevel(event: Event) {
+      const level = (event as CustomEvent<number>).detail;
+      appRef.current?.style.setProperty(
+        "--music-bg-scale",
+        String(1.08 + Math.max(0, Math.min(1, level)) * 0.32),
+      );
+    }
+
+    window.addEventListener("zovfy:audio-level", updateAudioLevel);
+    return () =>
+      window.removeEventListener("zovfy:audio-level", updateAudioLevel);
   }, []);
 
   function navigate(next: Screen) {
@@ -123,9 +138,19 @@ function App() {
         : screen === "albums"
           ? "Альбомы"
           : "Главная";
+  const backgroundCover = playingTrack?.coverUrl ?? selectedAlbum?.coverUrl;
+  const appStyle = backgroundCover
+    ? ({
+        "--music-cover-image": `url("${backgroundCover.replaceAll('"', '\\"')}")`,
+      } as React.CSSProperties)
+    : undefined;
 
   return (
-    <div className="music-app">
+    <div
+      ref={appRef}
+      className={`music-app${isPlaying ? " is-playing" : ""}`}
+      style={appStyle}
+    >
       <AlbumSidebar albums={albums} screen={screen} onNavigate={navigate} />
       <main className="music-main">
         <AlbumHeader

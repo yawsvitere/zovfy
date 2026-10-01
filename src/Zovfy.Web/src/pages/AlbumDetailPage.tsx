@@ -232,15 +232,8 @@ export function AlbumDetailPage({
     }
   }
 
-  const coverImage = album.coverUrl
-    ? `url("${album.coverUrl.replaceAll('"', '\\"')}")`
-    : undefined;
-
   return (
-    <div
-      className="album-page"
-      style={{ "--album-cover-image": coverImage } as React.CSSProperties}
-    >
+    <div className="album-page">
       <section className="album-content">
         <header className="album-hero">
           <button
