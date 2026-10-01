@@ -84,7 +84,9 @@ function App() {
 
   useEffect(() => {
     function syncLocation() {
-      const albumMatch = window.location.pathname.match(/^\/albums\/([^/]+)\/?$/);
+      const albumMatch = window.location.pathname.match(
+        /^\/albums\/([^/]+)\/?$/,
+      );
       if (albumMatch) {
         void loadAlbumDetail(decodeURIComponent(albumMatch[1]));
         return;
