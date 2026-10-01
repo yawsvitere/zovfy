@@ -166,10 +166,9 @@
 
 .pending-tracks li {
   display: grid;
-  grid-template-columns: 30px minmax(120px, 1fr) minmax(110px, 0.8fr) minmax(
-      100px,
-      1fr
-    ) 34px;
+  grid-template-columns:
+    30px minmax(120px, 1fr) minmax(110px, 0.8fr) minmax(100px, 1fr)
+    34px;
   min-height: 52px;
   align-items: center;
   gap: 10px;

@@ -752,7 +752,11 @@ export function AudioPlayer({
           }
 
           const threshold = duration > 0 && duration < 30 ? duration * 0.9 : 30;
-          if (session.elapsed >= threshold && !session.counted && !session.sending) {
+          if (
+            session.elapsed >= threshold &&
+            !session.counted &&
+            !session.sending
+          ) {
             session.sending = true;
             void recordListening(track.id, session.id)
               .then(() => {
