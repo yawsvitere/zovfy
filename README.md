@@ -44,6 +44,27 @@ docker compose --profile containerized up --build
 
 Frontend в контейнере доступен по адресу http://localhost:8080.
 
+## Production: Docker и GitHub Actions
+
+Workflow `.github/workflows/publish-images.yml` собирает API и frontend образы и отправляет их в GitHub Container Registry при каждом push в `master`. Образы публикуются как `ghcr.io/yawsvitere/zovfy-api:latest` и `ghcr.io/yawsvitere/zovfy-web:latest`, а также с тегом коммита. PostgreSQL и MinIO не включаются в образы приложения: production Compose запускает их отдельными контейнерами с постоянными volumes.
+
+На сервере, где настроен доступ к GHCR (для приватных пакетов предварительно выполните `docker login ghcr.io`), подготовьте конфигурацию:
+
+```powershell
+Copy-Item .env.production.example .env
+```
+
+Замените секреты в `.env` на случайные значения. Для JWT используйте секрет не короче 32 символов, задайте `PUBLIC_ORIGIN` как публичный адрес приложения, например `https://music.example.com`, и при необходимости укажите email первого администратора в `ADMIN_EMAIL`.
+
+Запуск production-стека и обновление образов:
+
+```powershell
+docker compose -f compose.production.yaml pull
+docker compose -f compose.production.yaml up -d
+```
+
+Nginx раздаёт приложение и проксирует API через один origin на порту `3000` (`APP_PORT` можно изменить). PostgreSQL и MinIO API доступны только внутри Docker-сети; консоль MinIO привязана к localhost на порту `9001`. После следующего push в `master` обновите сервер повторным выполнением команд `pull` и `up -d`. Данные хранятся в volumes `zovfy-production_postgres_data` и `zovfy-production_minio_data`.
+
 ## API
 
 - `POST /api/auth/register` — регистрация (`email`, `password`)
