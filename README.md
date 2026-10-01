@@ -46,24 +46,88 @@ Frontend в контейнере доступен по адресу http://local
 
 ## Production: Docker и GitHub Actions
 
-Workflow `.github/workflows/publish-images.yml` собирает API и frontend образы и отправляет их в GitHub Container Registry при каждом push в `master`. Образы публикуются как `ghcr.io/yawsvitere/zovfy-api:latest` и `ghcr.io/yawsvitere/zovfy-web:latest`, а также с тегом коммита. PostgreSQL и MinIO не включаются в образы приложения: production Compose запускает их отдельными контейнерами с постоянными volumes.
+### Что публикуется
 
-На сервере, где настроен доступ к GHCR (для приватных пакетов предварительно выполните `docker login ghcr.io`), подготовьте конфигурацию:
+Workflow `.github/workflows/publish-images.yml` при push в `master` собирает и публикует два образа в GitHub Container Registry (GHCR): `ghcr.io/yawsvitere/zovfy-api` и `ghcr.io/yawsvitere/zovfy-web`. Для каждого создаются теги `latest` и `sha-<commit>`. PostgreSQL и MinIO не собираются из исходников: production Compose запускает их отдельными контейнерами и хранит данные в Docker volumes.
 
-```powershell
-Copy-Item .env.production.example .env
+Workflow публикует образы, но сам сервер не обновляет. После push дождитесь успешного GitHub Actions run, затем выполните на сервере шаги обновления ниже.
+
+### Установка на Ubuntu
+
+Инструкция рассчитана на чистый сервер Ubuntu 22.04/24.04 с публичным IP и доменом, указывающим на этот IP.
+
+1. Установите Docker Engine и Compose plugin:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo docker run --rm hello-world
 ```
 
-Замените секреты в `.env` на случайные значения. Для JWT используйте секрет не короче 32 символов, задайте `PUBLIC_ORIGIN` как публичный адрес приложения, например `https://music.example.com`, и при необходимости укажите email первого администратора в `ADMIN_EMAIL`.
+2. Разрешите входящие SSH и HTTP/HTTPS в firewall или панели хостинга. Порт `3000` будет точкой входа приложения, если не поставить перед ним HTTPS reverse proxy. PostgreSQL и MinIO API наружу не публикуются; MinIO Console слушает только `127.0.0.1:9001`.
 
-Запуск production-стека и обновление образов:
+3. Настройте чтение образов. Если пакеты GHCR приватные, создайте GitHub Personal Access Token (classic) со scope `read:packages` и войдите в GHCR на сервере. Для публичных пакетов этот шаг не нужен.
 
-```powershell
-docker compose -f compose.production.yaml pull
-docker compose -f compose.production.yaml up -d
+```bash
+sudo docker login ghcr.io -u YOUR_GITHUB_USERNAME
 ```
 
-Nginx раздаёт приложение и проксирует API через один origin на порту `3000` (`APP_PORT` можно изменить). PostgreSQL и MinIO API доступны только внутри Docker-сети; консоль MinIO привязана к localhost на порту `9001`. После следующего push в `master` обновите сервер повторным выполнением команд `pull` и `up -d`. Данные хранятся в volumes `zovfy-production_postgres_data` и `zovfy-production_minio_data`.
+На запрос пароля вставьте токен. Не добавляйте токен в команду или `.env`. Чтобы сделать образы публичными, после первой успешной публикации откройте настройки каждого пакета `zovfy-api` и `zovfy-web` в GitHub Packages и измените Package visibility на Public.
+
+4. Получите Compose-файлы. Для публичного репозитория:
+
+```bash
+sudo mkdir -p /opt/zovfy
+sudo chown "$USER":"$USER" /opt/zovfy
+git clone https://github.com/yawsvitere/zovfy.git /opt/zovfy
+cd /opt/zovfy
+```
+
+Для приватного репозитория настройте SSH deploy key или другой способ аутентификации Git и клонируйте его по SSH. Исходники на сервере нужны только для Compose-файла и env-шаблона; приложения запускаются из GHCR-образов.
+
+5. Создайте и заполните production env-файл:
+
+```bash
+cp .env.production.example .env
+openssl rand -hex 32
+openssl rand -hex 24
+openssl rand -hex 24
+nano .env
+```
+
+Вставьте три случайных значения соответственно в `JWT_KEY`, `POSTGRES_PASSWORD` и `MINIO_ROOT_PASSWORD`. HEX-значения не содержат символов, которые ломают строку подключения PostgreSQL. Задайте `PUBLIC_ORIGIN` равным origin сайта, например `https://music.example.com` за HTTPS proxy или `http://SERVER_IP:3000` для временного теста. При необходимости укажите `ADMIN_EMAIL`. Не публикуйте `.env` и не коммитьте его.
+
+6. Скачайте образы и запустите сервисы:
+
+```bash
+sudo docker compose -f compose.production.yaml pull
+sudo docker compose -f compose.production.yaml up -d
+sudo docker compose -f compose.production.yaml ps
+```
+
+Приложение будет доступно на `http://SERVER_IP:3000`. Внутренний Nginx раздаёт web и проксирует `/api` и `/hubs` к API. Для постоянного публичного размещения настройте TLS на внешнем reverse proxy или load balancer и направьте его на `127.0.0.1:3000` (для этого замените публикацию порта в Compose на `127.0.0.1:${APP_PORT:-3000}:80`). Укажите HTTPS-origin в `PUBLIC_ORIGIN`, затем пересоздайте API: `sudo docker compose -f compose.production.yaml up -d --force-recreate api`.
+
+### Обновление после push
+
+После успешного workflow в GitHub Actions:
+
+```bash
+cd /opt/zovfy
+git pull
+sudo docker compose -f compose.production.yaml pull
+sudo docker compose -f compose.production.yaml up -d
+sudo docker compose -f compose.production.yaml ps
+```
+
+Compose использует тег `latest`. Для установки конкретного коммита задайте в `.env` `IMAGE_TAG=sha-<полный-commit-sha>` и снова выполните `pull` и `up -d`.
+
+Логи: `sudo docker compose -f compose.production.yaml logs -f web api`. Перезапуск: `sudo docker compose -f compose.production.yaml restart`. Для консоли MinIO создайте SSH-туннель `ssh -L 9001:127.0.0.1:9001 USER@SERVER`, затем откройте `http://localhost:9001`. Не выполняйте `docker compose down -v` при обычном обновлении: эта команда удалит volumes PostgreSQL и MinIO вместе с данными.
 
 ## API
 
