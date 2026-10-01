@@ -1,0 +1,66 @@
+:root {
+  font-family: "Rubik", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  color-scheme: dark;
+
+  --primary-color: #ff6b9d;
+  --primary-hover: #e55082;
+  --primary-dark: #e55082;
+  --primary-pink: #ff6b9d;
+  --dark-pink: #e55082;
+  --soft-pink: rgb(255 107 157 / 11%);
+  --light-pink: rgb(255 107 157 / 22%);
+  --pink-gradient: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
+  --soft-pink-gradient: linear-gradient(135deg, #ffe1e9 0%, #f8d7da 100%);
+
+  --bg-color: #0f0f11;
+  --bg-secondary: #1a1a1d;
+  --border-color: #2d2d32;
+  --text-color: #f3f4f6;
+  --text-dark: #f3f4f6;
+  --text-light: #d1d1d1;
+  --text-lighter: #9ca3af;
+  --transition: 0.25s;
+  --shadow: 0 2px 6px rgb(0 0 0 / 50%);
+  --shadow-strong: 0 4px 20px rgb(0 0 0 / 60%);
+
+  --ink: var(--text-color);
+  --muted: var(--text-lighter);
+  --line: var(--border-color);
+  --paper: var(--bg-color);
+  --accent: var(--primary-color);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--text-color);
+  background: var(--bg-secondary);
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}

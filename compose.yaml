@@ -1,0 +1,77 @@
+name: zovfy
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zovfy}
+      POSTGRES_USER: ${POSTGRES_USER:-zovfy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-zovfy} -d ${POSTGRES_DB:-zovfy}",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: elestio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-local-minio-password}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Zovfy.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-zovfy};Username=${POSTGRES_USER:-zovfy};Password=${POSTGRES_PASSWORD:-local-dev-password}
+      Jwt__Key: ${JWT_KEY:-local-development-only-change-this-secret-key-32chars}
+      Jwt__Issuer: ${JWT_ISSUER:-zovfy-api}
+      Jwt__Audience: ${JWT_AUDIENCE:-zovfy-web}
+      Storage__Endpoint: http://minio:9000
+      Storage__Bucket: ${MINIO_BUCKET:-zovfy-files}
+      Storage__AccessKey: ${MINIO_ROOT_USER:-minioadmin}
+      Storage__SecretKey: ${MINIO_ROOT_PASSWORD:-local-minio-password}
+      Cors__Origins__0: http://localhost:8080
+      Cors__Origins__1: http://localhost:5173
+    ports:
+      - "${API_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  web:
+    profiles: [containerized]
+    build:
+      context: .
+      dockerfile: src/Zovfy.Web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  minio_data:

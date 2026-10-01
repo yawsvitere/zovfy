@@ -1,0 +1,22 @@
+export type Screen = "home" | "albums" | "create" | "detail";
+export type Track = {
+  id?: string;
+  title: string;
+  artist?: string;
+  url?: string;
+  coverUrl?: string;
+  duration?: number | null;
+  order?: number;
+};
+export type Album = {
+  id: string;
+  name: string;
+  artist: string;
+  year?: number | null;
+  coverUrl?: string;
+  trackCount?: number;
+  tracks?: Track[];
+};
+export type AlbumDetailsResponse = { album: Album; tracks?: Track[] };
+export type AuthResponse = { accessToken: string; expiresAt: string };
+export type PendingTrack = { id: string; file: File; title: string };
