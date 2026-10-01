@@ -84,7 +84,6 @@ export function AlbumDetailPage({
 }: Props) {
   const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
   const [visibleMenuId, setVisibleMenuId] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -115,16 +114,15 @@ export function AlbumDetailPage({
   }, [album?.artist]);
 
   useEffect(() => {
-    if (!modalOpen && !visibleMenuId) return;
+    if (!visibleMenuId) return;
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key === "Escape") {
-        setModalOpen(false);
         setVisibleMenuId(null);
       }
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [modalOpen, visibleMenuId]);
+  }, [visibleMenuId]);
 
   useEffect(() => {
     function syncLikedTracks() {
@@ -266,11 +264,7 @@ export function AlbumDetailPage({
     <div className="album-page">
       <section className="album-content">
         <header className="album-hero">
-          <button
-            className="album-cover-button"
-            onClick={() => album.coverUrl && setModalOpen(true)}
-            aria-label="Открыть обложку"
-          >
+          <div className="album-cover-button">
             {album.coverUrl ? (
               <img
                 className="album-cover"
@@ -285,7 +279,7 @@ export function AlbumDetailPage({
                 <Music2 size={54} />
               </span>
             )}
-          </button>
+          </div>
           <div className="album-info">
             <span className="album-type">Альбом</span>
             <h2 className="album-title">{album.name}</h2>
@@ -499,34 +493,6 @@ export function AlbumDetailPage({
           )}
         </section>
       </section>
-
-      {modalOpen && album.coverUrl && (
-        <div
-          className="media-modal active"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Обложка альбома ${album.name}`}
-          onClick={() => setModalOpen(false)}
-        >
-          <div
-            className="modal-content"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              onClick={() => setModalOpen(false)}
-              aria-label="Закрыть"
-            >
-              <X size={20} />
-            </button>
-            <img
-              className="modal-media"
-              src={album.coverUrl}
-              alt={`Обложка: ${album.name}`}
-            />
-          </div>
-        </div>
-      )}
 
       {editOpen && (
         <AlbumEditModal

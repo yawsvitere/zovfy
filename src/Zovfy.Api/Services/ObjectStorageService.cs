@@ -13,7 +13,7 @@ public sealed class ObjectStorageService(IAmazonS3 client, IConfiguration config
         string contentType,
         CancellationToken cancellationToken)
     {
-        var objectKey = $"{Guid.NewGuid():N}/{fileName}";
+        var objectKey = Guid.NewGuid().ToString("N");
         try
         {
             await client.GetBucketLocationAsync(_bucket, cancellationToken);

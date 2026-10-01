@@ -178,10 +178,7 @@ export function AudioPlayer({
       const audio = audioRef.current;
       setQueue(nextQueue);
       if (sameTrack(currentTrackRef.current, nextTrack) && audio) {
-        if (audio.paused)
-          void audio
-            .play()
-            .catch(() => setError("Не удалось воспроизвести трек."));
+        if (audio.paused) void audio.play();
         else audio.pause();
         return;
       }
@@ -192,7 +189,7 @@ export function AudioPlayer({
       if (!audio || !nextTrack.url) return;
       audio.src = nextTrack.url;
       audio.load();
-      void audio.play().catch(() => setError("Не удалось воспроизвести трек."));
+      void audio.play();
     }
     window.addEventListener("zovfy:play-track", receivePlayRequest);
     return () =>
@@ -220,7 +217,7 @@ export function AudioPlayer({
     if (!audio || !track.url) return;
     audio.src = track.url;
     audio.load();
-    void audio.play().catch(() => setError("Не удалось воспроизвести трек."));
+    void audio.play();
   }, [track?.id, track?.url]);
 
   useEffect(() => {
@@ -264,7 +261,7 @@ export function AudioPlayer({
     if (!audio || !nextTrack.url) return;
     audio.src = nextTrack.url;
     audio.load();
-    void audio.play().catch(() => setError("Не удалось воспроизвести трек."));
+    void audio.play();
   }
 
   function stepTrack(direction: -1 | 1) {
@@ -409,10 +406,7 @@ export function AudioPlayer({
               className="zovfy-play-button"
               onClick={() => {
                 const audio = audioRef.current;
-                if (audio?.paused)
-                  void audio
-                    .play()
-                    .catch(() => setError("Не удалось воспроизвести трек."));
+                if (audio?.paused) void audio.play();
                 else audio?.pause();
               }}
               title={isPlaying ? "Пауза" : "Воспроизвести"}
@@ -622,10 +616,7 @@ export function AudioPlayer({
                 className="zovfy-fullscreen-play"
                 onClick={() => {
                   const audio = audioRef.current;
-                  if (audio?.paused)
-                    void audio
-                      .play()
-                      .catch(() => setError("Не удалось воспроизвести трек."));
+                  if (audio?.paused) void audio.play();
                   else audio?.pause();
                 }}
                 title={isPlaying ? "Пауза" : "Воспроизвести"}
