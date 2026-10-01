@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   authenticate,
   createAlbum,
+  getArtist,
   getAlbum,
   loadAlbums,
   loadMyLikes,
+  updateArtist,
 } from "./api";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { AlbumHeader } from "./components/AlbumHeader";
@@ -14,6 +16,7 @@ import { AlbumDetailPage } from "./pages/AlbumDetailPage.tsx";
 import { AlbumsPage } from "./pages/AlbumsPage";
 import { HomePage } from "./pages/HomePage";
 import { UploadAlbumPage } from "./pages/UploadAlbumPage";
+import { ArtistPage } from "./pages/ArtistPage";
 import type { Album, Screen, Track } from "./types";
 import "./tokens.css";
 import "./styles/music-layout.css";
@@ -23,6 +26,8 @@ function App() {
   const [screen, setScreen] = useState<Screen>("home");
   const [albums, setAlbums] = useState<Album[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  const [selectedArtist, setSelectedArtist] = useState("");
+  const [artistReturnScreen, setArtistReturnScreen] = useState<Screen>("home");
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
@@ -55,6 +60,23 @@ function App() {
 
   useEffect(() => {
     void refreshAlbums();
+  }, []);
+
+  useEffect(() => {
+    function syncLocation() {
+      const match = window.location.pathname.match(/^\/artist\/([^/]+)\/?$/);
+      if (match) {
+        setSelectedArtist(decodeURIComponent(match[1]));
+        setScreen("artist");
+      } else {
+        setScreen(
+          (window.history.state?.screen as Screen | undefined) ?? "home",
+        );
+      }
+    }
+    window.addEventListener("popstate", syncLocation);
+    syncLocation();
+    return () => window.removeEventListener("popstate", syncLocation);
   }, []);
 
   useEffect(() => {
@@ -94,12 +116,40 @@ function App() {
   }, []);
 
   function navigate(next: Screen) {
+    if (next !== "artist")
+      window.history.replaceState({ screen: next }, "", "/");
     setScreen(next);
     setError("");
     setNotice("");
   }
 
+  function openArtist(name: string) {
+    if (!name.trim()) return;
+    setArtistReturnScreen(screen === "artist" ? artistReturnScreen : screen);
+    window.history.pushState(
+      { screen },
+      "",
+      `/artist/${encodeURIComponent(name.trim())}`,
+    );
+    setSelectedArtist(name.trim());
+    setScreen("artist");
+    setError("");
+    setNotice("");
+  }
+
+  async function saveArtist(name: string, formData: FormData) {
+    if (!accessToken)
+      throw new Error("Войдите в аккаунт, чтобы редактировать артиста.");
+    await updateArtist(name, formData, accessToken);
+    return getArtist(name, accessToken);
+  }
+
+  function closeArtist() {
+    navigate(artistReturnScreen === "artist" ? "home" : artistReturnScreen);
+  }
+
   async function openAlbum(album: Album) {
+    window.history.replaceState({ screen: "detail" }, "", "/");
     setSelectedAlbum(album);
     setScreen("detail");
     setLoadingDetail(true);
@@ -163,9 +213,11 @@ function App() {
       ? "Новый альбом"
       : screen === "detail"
         ? (selectedAlbum?.name ?? "Альбом")
-        : screen === "albums"
-          ? "Альбомы"
-          : "Главная";
+        : screen === "artist"
+          ? selectedArtist
+          : screen === "albums"
+            ? "Альбомы"
+            : "Главная";
   const backgroundCover = playingTrack?.coverUrl ?? selectedAlbum?.coverUrl;
   const appStyle = backgroundCover
     ? ({
@@ -211,6 +263,7 @@ function App() {
               albums={albums}
               loading={loading}
               onOpenAlbum={openAlbum}
+              onOpenArtist={openArtist}
               onCreate={() => navigate("create")}
             />
           )}
@@ -219,6 +272,7 @@ function App() {
               albums={albums}
               loading={loading}
               onOpenAlbum={openAlbum}
+              onOpenArtist={openArtist}
               onCreate={() => navigate("create")}
             />
           )}
@@ -241,6 +295,17 @@ function App() {
               onPlayTracks={playTracks}
               onBack={() => navigate("albums")}
               onOpenAlbum={openAlbum}
+              onOpenArtist={openArtist}
+            />
+          )}
+          {screen === "artist" && (
+            <ArtistPage
+              name={selectedArtist}
+              accessToken={accessToken}
+              onOpenAlbum={openAlbum}
+              onOpenArtist={openArtist}
+              onBack={closeArtist}
+              onSave={saveArtist}
             />
           )}
         </section>
@@ -256,6 +321,7 @@ function App() {
         onDurationChange={(trackId, duration) =>
           setTrackDurations((current) => ({ ...current, [trackId]: duration }))
         }
+        onOpenArtist={openArtist}
       />
     </div>
   );

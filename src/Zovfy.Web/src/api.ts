@@ -126,6 +126,7 @@ export type ArtistProfile = {
   bannerUrl?: string | null;
   avatarUrl?: string | null;
   totalPlays: number;
+  canEdit: boolean;
   releases: Album[];
 };
 
@@ -160,9 +161,15 @@ export async function updateMyProfile(
   );
 }
 
-export async function getArtist(name: string): Promise<ArtistProfile> {
+export async function getArtist(
+  name: string,
+  accessToken?: string | null,
+): Promise<ArtistProfile> {
   return parseResponse<ArtistProfile>(
-    await fetch(`/api/artists/${encodeURIComponent(name)}`),
+    await fetch(`/api/artists/${encodeURIComponent(name)}`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      credentials: "include",
+    }),
   );
 }
 

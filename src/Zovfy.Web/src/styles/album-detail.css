@@ -90,6 +90,7 @@
 
 .album-details {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 5px;
   margin: 32px 0 0;
@@ -99,8 +100,30 @@
 }
 
 .artist-link {
+  padding: 0;
   color: var(--primary-pink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
   font-weight: 600;
+}
+
+.artist-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.artist-avatar-small {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.artist-link:hover {
+  text-decoration: underline;
 }
 
 .album-actions {

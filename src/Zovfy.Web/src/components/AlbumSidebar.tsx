@@ -55,7 +55,9 @@ export function AlbumSidebar({ albums, screen, onNavigate }: Props) {
             itemScreen === "home"
               ? screen === "home"
               : itemScreen === "albums"
-                ? screen === "albums" || screen === "detail"
+                ? screen === "albums" ||
+                  screen === "detail" ||
+                  screen === "artist"
                 : screen === "create";
 
           return (

@@ -71,9 +71,22 @@
   font-size: 13px;
   font-weight: 650;
 }
-.zovfy-player-copy span {
+.zovfy-player-copy .zovfy-artist-link {
+  max-width: 100%;
+  padding: 0;
   color: var(--text-lighter);
   font-size: 12px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.zovfy-artist-link:hover {
+  color: var(--primary-pink);
+  text-decoration: underline;
 }
 
 .zovfy-icon-button,
@@ -369,13 +382,24 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.zovfy-fullscreen-info p {
+.zovfy-fullscreen-info p,
+.zovfy-fullscreen-info .zovfy-artist-link {
+  display: block;
+  max-width: 100%;
+  padding: 0;
   overflow: hidden;
   margin: 0;
   color: rgb(255 255 255 / 68%);
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.zovfy-fullscreen-info .zovfy-artist-link {
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
 .zovfy-fullscreen-info .zovfy-icon-button {
   color: rgb(255 255 255 / 70%);

@@ -1,4 +1,4 @@
-export type Screen = "home" | "albums" | "create" | "detail";
+export type Screen = "home" | "albums" | "create" | "detail" | "artist";
 export type Track = {
   id?: string;
   title: string;

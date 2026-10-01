@@ -7,6 +7,7 @@ type Props = {
   loading: boolean;
   query?: string;
   onOpenAlbum: (album: Album) => void;
+  onOpenArtist: (name: string) => void;
   onCreate: () => void;
 };
 
@@ -15,6 +16,7 @@ export function AlbumGrid({
   loading,
   query = "",
   onOpenAlbum,
+  onOpenArtist,
   onCreate,
 }: Props) {
   if (loading) return <div className="loading-state">Загружаю альбомы…</div>;
@@ -38,27 +40,42 @@ export function AlbumGrid({
   return (
     <div className="album-grid">
       {albums.map((album) => (
-        <button
-          className="album-card"
-          key={album.id}
-          onClick={() => onOpenAlbum(album)}
-        >
-          <span className="album-cover">
-            {album.coverUrl ? (
-              <img src={album.coverUrl} alt="" />
-            ) : (
-              <Music2 size={31} />
-            )}
-          </span>
+        <article className="album-card" key={album.id}>
+          <button
+            type="button"
+            className="album-card-open"
+            onClick={() => onOpenAlbum(album)}
+            aria-label={`Открыть альбом ${album.name}`}
+          >
+            <span className="album-cover">
+              {album.coverUrl ? (
+                <img src={album.coverUrl} alt="" />
+              ) : (
+                <Music2 size={31} />
+              )}
+            </span>
+          </button>
           <span className="album-card-copy">
-            <strong>{album.name}</strong>
-            <span>{album.artist}</span>
+            <button
+              type="button"
+              className="album-card-title"
+              onClick={() => onOpenAlbum(album)}
+            >
+              {album.name}
+            </button>
+            <button
+              type="button"
+              className="album-card-artist"
+              onClick={() => onOpenArtist(album.artist)}
+            >
+              {album.artist}
+            </button>
             <small>
               {album.year || "Год не указан"} ·{" "}
               {album.trackCount ?? album.tracks?.length ?? 0} треков
             </small>
           </span>
-        </button>
+        </article>
       ))}
     </div>
   );

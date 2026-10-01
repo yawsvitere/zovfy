@@ -50,10 +50,26 @@ public sealed class AuthController(
         }
 
         var roles = await userManager.GetRolesAsync(user);
-        if (roles.Count == 0)
+        if (IsInitialAdmin(user.Email))
         {
-            var role = IsInitialAdmin(user.Email) ? "Admin" : "User";
-            await userManager.AddToRoleAsync(user, role);
+            if (!roles.Contains("Admin", StringComparer.OrdinalIgnoreCase))
+            {
+                var result = await userManager.AddToRoleAsync(user, "Admin");
+                if (!result.Succeeded)
+                {
+                    return StatusCode(StatusCodes.Status500InternalServerError,
+                        new { message = "Не удалось назначить роль администратора." });
+                }
+            }
+        }
+        else if (roles.Count == 0)
+        {
+            var result = await userManager.AddToRoleAsync(user, "User");
+            if (!result.Succeeded)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "Не удалось назначить роль пользователя." });
+            }
         }
 
         return Ok(await CreateToken(user));

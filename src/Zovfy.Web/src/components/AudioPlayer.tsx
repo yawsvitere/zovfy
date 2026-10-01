@@ -33,6 +33,7 @@ type Props = {
   onTrackChange: (track: Track | null) => void;
   onPlayingChange: (playing: boolean) => void;
   onDurationChange: (trackId: string, duration: number) => void;
+  onOpenArtist: (name: string) => void;
 };
 
 function formatTime(seconds: number) {
@@ -61,6 +62,7 @@ export function AudioPlayer({
   onTrackChange,
   onPlayingChange,
   onDurationChange,
+  onOpenArtist,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -363,9 +365,17 @@ export function AudioPlayer({
           )}
           <div className="zovfy-player-copy">
             <strong title={track.title}>{track.title}</strong>
-            <span title={track.artist}>
-              {track.artist || "Неизвестный исполнитель"}
-            </span>
+            {track.artist ? (
+              <button
+                className="zovfy-artist-link"
+                title={track.artist}
+                onClick={() => onOpenArtist(track.artist!)}
+              >
+                {track.artist}
+              </button>
+            ) : (
+              <span>Неизвестный исполнитель</span>
+            )}
           </div>
           <button
             className={`zovfy-icon-button zovfy-like${liked ? " active" : ""}`}
@@ -551,7 +561,16 @@ export function AudioPlayer({
             <div className="zovfy-fullscreen-info">
               <div>
                 <h2>{track.title}</h2>
-                <p>{track.artist || "Неизвестный исполнитель"}</p>
+                {track.artist ? (
+                  <button
+                    className="zovfy-artist-link"
+                    onClick={() => onOpenArtist(track.artist!)}
+                  >
+                    {track.artist}
+                  </button>
+                ) : (
+                  <p>Неизвестный исполнитель</p>
+                )}
               </div>
               <button
                 className={`zovfy-icon-button zovfy-like${liked ? " active" : ""}`}

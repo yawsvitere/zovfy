@@ -15,7 +15,7 @@ import {
   Shuffle,
   X,
 } from "lucide-react";
-import { updateLike } from "../api";
+import { getArtist, updateLike } from "../api";
 import type { Album, Track } from "../types";
 import "../styles/album-cards.css";
 import "../styles/album-detail.css";
@@ -30,6 +30,7 @@ type Props = {
   onPlayTracks: (tracks: Track[], index: number, coverUrl?: string) => void;
   onBack: () => void;
   onOpenAlbum: (album: Album) => void;
+  onOpenArtist: (name: string) => void;
 };
 
 function readSavedIds(key: string) {
@@ -75,6 +76,7 @@ export function AlbumDetailPage({
   onPlayTracks,
   onBack,
   onOpenAlbum,
+  onOpenArtist,
 }: Props) {
   const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
   const [visibleMenuId, setVisibleMenuId] = useState<string | null>(null);
@@ -89,6 +91,23 @@ export function AlbumDetailPage({
   const [likedTracks, setLikedTracks] = useState(() =>
     readSavedIds("zovfy.likedTracks"),
   );
+  const [artistAvatarUrl, setArtistAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setArtistAvatarUrl(null);
+    if (!album?.artist) return;
+    void getArtist(album.artist)
+      .then((profile) => {
+        if (active) setArtistAvatarUrl(profile.avatarUrl ?? null);
+      })
+      .catch(() => {
+        if (active) setArtistAvatarUrl(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [album?.artist]);
 
   useEffect(() => {
     if (!modalOpen && !visibleMenuId) return;
@@ -266,7 +285,23 @@ export function AlbumDetailPage({
             <span className="album-type">Альбом</span>
             <h2 className="album-title">{album.name}</h2>
             <p className="album-details">
-              <span className="artist-link">{album.artist}</span>
+              <span className="artist-identity">
+                {artistAvatarUrl && (
+                  <img
+                    className="artist-avatar-small"
+                    src={artistAvatarUrl}
+                    alt=""
+                    onError={() => setArtistAvatarUrl(null)}
+                  />
+                )}
+                <button
+                  className="artist-link"
+                  type="button"
+                  onClick={() => onOpenArtist(album.artist)}
+                >
+                  {album.artist}
+                </button>
+              </span>
               {album.year ? <> · {album.year}</> : null}
               {album.genre ? <> · {album.genre}</> : null}
               {" · "}

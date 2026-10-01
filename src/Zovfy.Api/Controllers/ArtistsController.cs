@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Amazon.S3;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,13 @@ public sealed class ArtistsController(AppDbContext database, ObjectStorageServic
     public async Task<IActionResult> GetArtist(string name, CancellationToken cancellationToken)
     {
         var key = Normalize(name);
+        var canEdit = User.IsInRole("Admin") || User.IsInRole("Moderator");
+        if (!canEdit && Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+        {
+            canEdit = await database.Albums.AsNoTracking().AnyAsync(album =>
+                album.OwnerId == userId && (album.Artist.ToLower() == key ||
+                    album.Tracks.Any(track => track.Artist.ToLower() == key)), cancellationToken);
+        }
         var profile = await database.ArtistProfiles.AsNoTracking()
             .FirstOrDefaultAsync(item => item.NameKey == key, cancellationToken);
         var releases = await database.Albums.AsNoTracking()
@@ -51,12 +59,13 @@ public sealed class ArtistsController(AppDbContext database, ObjectStorageServic
             bannerUrl = profile?.BannerObjectKey == null ? null : $"/api/artists/{Uri.EscapeDataString(name)}/banner",
             avatarUrl = profile?.AvatarObjectKey == null ? null : $"/api/artists/{Uri.EscapeDataString(name)}/avatar",
             totalPlays,
+            canEdit,
             releases
         });
     }
 
     [HttpPut("{name}")]
-    [Authorize(Roles = "Admin,Moderator")]
+    [Authorize]
     [RequestSizeLimit(25_000_000)]
     [RequestFormLimits(MultipartBodyLengthLimit = 25_000_000)]
     public async Task<IActionResult> UpdateArtist(
@@ -65,6 +74,13 @@ public sealed class ArtistsController(AppDbContext database, ObjectStorageServic
         CancellationToken cancellationToken)
     {
         var displayName = name.Trim();
+        var key = Normalize(displayName);
+        var hasRoleAccess = User.IsInRole("Admin") || User.IsInRole("Moderator");
+        var ownsRelease = Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) &&
+            await database.Albums.AnyAsync(album => album.OwnerId == userId &&
+                (album.Artist.ToLower() == key || album.Tracks.Any(track => track.Artist.ToLower() == key)), cancellationToken);
+        if (!hasRoleAccess && !ownsRelease) return Forbid();
+
         if (displayName.Length is 0 or > 120 || request.Description?.Length > 5000)
         {
             return BadRequest(new { message = "Проверьте название артиста и описание (не более 5000 символов)." });
@@ -74,7 +90,6 @@ public sealed class ArtistsController(AppDbContext database, ObjectStorageServic
             return BadRequest(new { message = "Изображения должны быть JPG, PNG или WEBP и не больше 10 МБ." });
         }
 
-        var key = Normalize(displayName);
         var profile = await database.ArtistProfiles.FirstOrDefaultAsync(item => item.NameKey == key, cancellationToken);
         if (profile is null)
         {
