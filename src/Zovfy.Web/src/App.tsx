@@ -145,10 +145,6 @@ function App() {
     return getArtist(name, accessToken);
   }
 
-  function closeArtist() {
-    navigate(artistReturnScreen === "artist" ? "home" : artistReturnScreen);
-  }
-
   async function openAlbum(album: Album) {
     window.history.replaceState({ screen: "detail" }, "", "/");
     setSelectedAlbum(album);
@@ -329,7 +325,6 @@ function App() {
               accessToken={accessToken}
               onOpenAlbum={openAlbum}
               onOpenArtist={openArtist}
-              onBack={closeArtist}
               onSave={saveArtist}
             />
           )}

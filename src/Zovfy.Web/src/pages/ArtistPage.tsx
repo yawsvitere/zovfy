@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ArrowLeft, Disc3, Edit3, Music2, X } from "lucide-react";
+import { Disc3, Edit3, X } from "lucide-react";
 import { getArtist, type ArtistProfile } from "../api";
 import type { Album } from "../types";
 import "../styles/artist.css";
@@ -9,7 +9,6 @@ type Props = {
   accessToken: string | null;
   onOpenAlbum: (album: Album) => void;
   onOpenArtist: (name: string) => void;
-  onBack: () => void;
   onSave: (name: string, formData: FormData) => Promise<ArtistProfile>;
 };
 
@@ -18,7 +17,6 @@ export function ArtistPage({
   accessToken,
   onOpenAlbum,
   onOpenArtist,
-  onBack,
   onSave,
 }: Props) {
   const [artist, setArtist] = useState<ArtistProfile | null>(null);
@@ -90,9 +88,6 @@ export function ArtistPage({
     return (
       <div className="artist-loading" role="alert">
         <p>{error}</p>
-        <button className="artist-back" onClick={onBack} type="button">
-          <ArrowLeft size={17} /> К каталогу
-        </button>
       </div>
     );
   if (!artist) return null;
@@ -104,31 +99,24 @@ export function ArtistPage({
         style={
           artist.bannerUrl
             ? {
-                backgroundImage: `linear-gradient(0deg, #111 0%, rgb(17 17 17 / 15%) 100%), url("${artist.bannerUrl}")`,
+                backgroundImage: `linear-gradient(0deg, #0f0f11 0%, rgb(15 15 17 / 12%) 100%), url("${artist.bannerUrl}")`,
               }
             : undefined
         }
       >
         <div className="artist-hero-shade" />
         <div className="artist-hero-inner">
-          <button className="artist-back" onClick={onBack} type="button">
-            <ArrowLeft size={17} /> К каталогу
-          </button>
           <div className="artist-heading">
-            {artist.avatarUrl ? (
-              <img className="artist-avatar" src={artist.avatarUrl} alt="" />
-            ) : (
-              <span className="artist-avatar artist-avatar-fallback">
-                <Music2 size={34} />
-              </span>
-            )}
             <div className="artist-heading-copy">
-              <span className="artist-eyebrow">Артист</span>
-              <h1>{artist.name}</h1>
-              <p>
-                {artist.releases.length} релизов ·{" "}
+              <span className="artist-eyebrow">
                 {artist.totalPlays.toLocaleString("ru-RU")} прослушиваний
-              </p>
+              </span>
+              <h1>{artist.name}</h1>
+              {artist.description && (
+                <p className="artist-heading-description">
+                  {artist.description}
+                </p>
+              )}
             </div>
             {artist.canEdit && (
               <button
@@ -155,9 +143,6 @@ export function ArtistPage({
           <p className="artist-error" role="alert">
             {error}
           </p>
-        )}
-        {artist.description && (
-          <p className="artist-description">{artist.description}</p>
         )}
         <div className="artist-releases-heading">
           <h2>Релизы</h2>
