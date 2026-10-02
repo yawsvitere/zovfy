@@ -3,6 +3,10 @@ name: Publish Docker images
 on:
   push:
     branches: [master]
+    paths:
+      - "src/Zovfy.Api/**"
+      - "src/Zovfy.Web/**"
+      - ".github/workflows/publish-images.yml"
   workflow_dispatch:
 
 permissions:
