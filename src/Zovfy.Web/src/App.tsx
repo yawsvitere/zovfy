@@ -284,7 +284,9 @@ function App() {
       className={`music-app${isPlaying ? " is-playing" : ""}`}
       style={appStyle}
     >
-      <main className="music-main">
+      <main
+        className={`music-main${screen === "home" ? " music-main-home" : ""}`}
+      >
         <AlbumHeader
           authenticated={Boolean(accessToken)}
           avatarUrl={userAvatarUrl}

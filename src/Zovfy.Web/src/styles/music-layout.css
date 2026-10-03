@@ -297,6 +297,10 @@ button:disabled {
   transition: margin-left 0.28s ease;
 }
 
+.music-sidebar + .music-main.music-main-home {
+  overflow-x: visible;
+}
+
 .music-sidebar.expanded + .music-main {
   margin-left: 258px;
 }

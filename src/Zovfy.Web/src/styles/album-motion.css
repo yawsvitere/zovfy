@@ -1,0 +1,168 @@
+.album-page {
+  --player-h: 100px;
+  --album-gap: 16px;
+
+  position: relative;
+  box-sizing: border-box;
+  height: calc(100dvh - var(--page-top, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-bottom: calc(var(--player-h) + var(--album-gap));
+  display: flex;
+  flex-direction: column;
+}
+
+.album-page.album-page--single {
+  padding-bottom: var(--player-h);
+}
+
+.album-page .album-content {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  margin-block: auto;
+  flex-shrink: 0;
+}
+
+.album-page .album-hero .album-cover-button {
+  width: fit-content;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  justify-self: start;
+  align-self: start;
+}
+.album-page .album-hero .album-cover-button::before,
+.album-page .album-hero .album-cover-button::after {
+  content: none;
+}
+.album-page .album-hero .album-cover {
+  display: block;
+}
+
+.album-page .album-cover-button {
+  animation: album-cover-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.1) backwards;
+}
+@keyframes album-cover-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.86) rotate(-4deg);
+    filter: blur(10px);
+  }
+  60% {
+    opacity: 1;
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.album-page .album-info > * {
+  animation: album-rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.album-page .album-info > :nth-child(1) {
+  animation-delay: 0.1s;
+}
+.album-page .album-info > :nth-child(2) {
+  animation-delay: 0.16s;
+}
+.album-page .album-info > :nth-child(3) {
+  animation-delay: 0.22s;
+}
+
+.album-page .album-title {
+  animation-name: album-title-in;
+  animation-duration: 0.5s;
+}
+@keyframes album-title-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes album-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.album-page .album-actions > * {
+  animation: album-pop 0.35s cubic-bezier(0.3, 1.5, 0.5, 1) backwards;
+}
+.album-page .album-actions > :nth-child(1) {
+  animation-delay: 0.26s;
+}
+.album-page .album-actions > :nth-child(2) {
+  animation-delay: 0.3s;
+}
+.album-page .album-actions > :nth-child(3) {
+  animation-delay: 0.34s;
+}
+.album-page .album-actions > :nth-child(4) {
+  animation-delay: 0.38s;
+}
+.album-page .album-actions > :nth-child(5) {
+  animation-delay: 0.42s;
+}
+@keyframes album-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.album-page .track-header {
+  animation: album-fade 0.3s ease 0.3s backwards;
+}
+.album-page .track-row {
+  animation: album-row-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(0.34s + min(var(--i, 0), 10) * 30ms);
+}
+@keyframes album-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes album-row-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .album-page * {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+  }
+}

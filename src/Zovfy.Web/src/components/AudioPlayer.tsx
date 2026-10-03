@@ -1,6 +1,7 @@
 import {
-  Fragment,
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -50,7 +51,7 @@ function formatTime(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 }
 
-type LyricLine = { time: number | null; end: number | null; text: string };
+type LyricLine = { time: number | null; text: string };
 
 function parseLrcTimestamp(timestamp: string) {
   const match = timestamp.match(/^(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?$/);
@@ -94,9 +95,9 @@ function parseLyrics(lrc: string | null, ttml: string | null): LyricLine[] {
       const text = line.replace(/\[[^\]]*\]/g, "").trim();
       if (text) {
         if (timestamps.length) {
-          for (const time of timestamps) lines.push({ time, end: null, text });
+          for (const time of timestamps) lines.push({ time, text });
         } else if (!line.trim().startsWith("[")) {
-          lines.push({ time: null, end: null, text });
+          lines.push({ time: null, text });
         }
       }
     }
@@ -117,19 +118,10 @@ function parseLyrics(lrc: string | null, ttml: string | null): LyricLine[] {
 
   return Array.from(document.getElementsByTagName("*"))
     .filter((element) => element.localName.toLowerCase() === "p")
-    .map((element) => {
-      const time = parseTtmlTimestamp(element.getAttribute("begin") ?? "");
-      const explicitEnd = parseTtmlTimestamp(element.getAttribute("end") ?? "");
-      const duration = parseTtmlTimestamp(element.getAttribute("dur") ?? "");
-      const end =
-        explicitEnd ??
-        (time !== null && duration !== null ? time + duration : null);
-      return {
-        time,
-        end: time !== null && end !== null && end > time ? end : null,
-        text: (element.textContent ?? "").replace(/\s+/g, " ").trim(),
-      };
-    })
+    .map((element) => ({
+      time: parseTtmlTimestamp(element.getAttribute("begin") ?? ""),
+      text: (element.textContent ?? "").replace(/\s+/g, " ").trim(),
+    }))
     .filter((line) => line.text)
     .sort((left, right) =>
       left.time === null
@@ -140,6 +132,50 @@ function parseLyrics(lrc: string | null, ttml: string | null): LyricLine[] {
           ? -1
           : left.time - right.time,
     );
+}
+
+type LyricItem =
+  | { kind: "line"; line: LyricLine; lineIndex: number }
+  | { kind: "gap"; start: number; end: number };
+
+type LyricView = {
+  key: string;
+  items: LyricItem[];
+  synced: boolean;
+  clock: number;
+};
+
+function buildLyricItems(lines: LyricLine[]): LyricItem[] {
+  const items: LyricItem[] = [];
+  const first = lines[0];
+  if (first && first.time !== null && first.time >= 3) {
+    items.push({ kind: "gap", start: 0, end: first.time });
+  }
+  lines.forEach((line, lineIndex) => {
+    items.push({ kind: "line", line, lineIndex });
+    const next = lines[lineIndex + 1];
+    if (line.time !== null && next && next.time !== null) {
+      const sung = Math.min(8, Math.max(3, line.text.length * 0.1));
+      const start = line.time + sung;
+      if (next.time - start >= 5) {
+        items.push({ kind: "gap", start, end: next.time });
+      }
+    }
+  });
+  return items;
+}
+
+function findActiveItem(items: LyricItem[], time: number) {
+  let active = -1;
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (item.kind === "gap") {
+      if (time >= item.start && time < item.end) return index;
+    } else if (item.line.time !== null && item.line.time <= time) {
+      active = index;
+    }
+  }
+  return active;
 }
 
 function readLikedIds() {
@@ -203,7 +239,14 @@ export function AudioPlayer({
   }>({ key: null, lrc: null, ttml: null, loading: false, error: "" });
   const lyricsListRef = useRef<HTMLDivElement | null>(null);
   const mainRef = useRef<HTMLDivElement | null>(null);
-  const activeLyricRef = useRef<HTMLParagraphElement | null>(null);
+  const layoutRef = useRef<HTMLDivElement | null>(null);
+  const focusElRef = useRef<HTMLElement | null>(null);
+  const lastViewRef = useRef<LyricView | null>(null);
+  const [openId, setOpenId] = useState(0);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const setFocusEl = useCallback((element: HTMLElement | null) => {
+    focusElRef.current = element;
+  }, []);
 
   const lyricsKey = track ? (track.id ?? track.url ?? track.title) : null;
 
@@ -275,70 +318,131 @@ export function AudioPlayer({
     return () => controller.abort();
   }, [lyricsKey, track?.lyricsLrc, track?.lyricsTtml]);
 
-  const currentLyrics = lyricsState.key === lyricsKey ? lyricsState : null;
+  const inlineLyrics = Boolean(
+    track?.lyricsLrc?.trim() || track?.lyricsTtml?.trim(),
+  );
+  const currentLyrics = inlineLyrics
+    ? {
+        key: lyricsKey,
+        lrc: track?.lyricsLrc ?? null,
+        ttml: track?.lyricsTtml ?? null,
+        loading: false,
+        error: "",
+      }
+    : lyricsState.key === lyricsKey
+      ? lyricsState
+      : null;
   const lyricLines = useMemo(
     () => parseLyrics(currentLyrics?.lrc ?? null, currentLyrics?.ttml ?? null),
     [currentLyrics?.lrc, currentLyrics?.ttml],
   );
-  const activeLyricIndex = lyricLines.reduce(
-    (activeIndex, line, index) =>
-      line.time !== null && line.time <= currentTime ? index : activeIndex,
-    -1,
-  );
-  const hasEmbeddedLyrics = Boolean(
-    track?.lyricsLrc?.trim() || track?.lyricsTtml?.trim(),
-  );
+  const lyricItems = useMemo(() => buildLyricItems(lyricLines), [lyricLines]);
   const hasLyricsContent = Boolean(
     currentLyrics?.lrc?.trim() || currentLyrics?.ttml?.trim(),
   );
   const lyricsSynced = lyricLines.some((line) => line.time !== null);
-  // Во время загрузки не двигаем обложку: сначала узнаём, есть ли вообще текст.
-  // Это убирает неприятный сценарий «центр → вбок → обратно в центр».
-  const showLyrics = Boolean(
-    hasEmbeddedLyrics || currentLyrics?.error || hasLyricsContent,
-  );
-  const beforeFirstLyric =
-    showLyrics && lyricsSynced && lyricLines.length > 0 && activeLyricIndex < 0;
-  const activeLyric = lyricLines[activeLyricIndex];
-  const nextLyric = lyricLines[activeLyricIndex + 1];
-  const lyricGapAfterIndex =
-    activeLyric?.end !== null &&
-    activeLyric?.end !== undefined &&
-    nextLyric?.time !== null &&
-    nextLyric?.time !== undefined &&
-    activeLyric.end < nextLyric.time &&
-    currentTime >= activeLyric.end &&
-    currentTime < nextLyric.time
-      ? activeLyricIndex
-      : -1;
 
-  useEffect(() => {
+  const lyricsStatus: "pending" | "ready" | "error" | "none" = !track
+    ? "none"
+    : currentLyrics === null
+      ? track.id
+        ? "pending"
+        : "none"
+      : currentLyrics.loading
+        ? "pending"
+        : currentLyrics.error
+          ? "error"
+          : lyricLines.length
+            ? "ready"
+            : hasLyricsContent
+              ? "error"
+              : "none";
+  const lyricsErrorText =
+    currentLyrics?.error || "Не удалось прочитать текст песни.";
+
+  const wantsLyricsOpen = lyricsStatus === "ready" || lyricsStatus === "error";
+  if (lyricsStatus !== "pending" && wantsLyricsOpen !== lyricsOpen) {
+    setLyricsOpen(wantsLyricsOpen);
+  }
+
+  if (lyricsStatus === "ready") {
+    lastViewRef.current = {
+      key: lyricsKey ?? "",
+      items: lyricItems,
+      synced: lyricsSynced,
+      clock: currentTime,
+    };
+  }
+  const lyricsView =
+    lyricsStatus === "ready" || lyricsStatus === "none"
+      ? lastViewRef.current
+      : null;
+  const activeItemIndex = lyricsView
+    ? findActiveItem(lyricsView.items, lyricsView.clock)
+    : -1;
+  const listKey = `${lyricsView?.key ?? lyricsStatus}:${openId}`;
+
+  function centerLyrics(behavior: ScrollBehavior) {
     const list = lyricsListRef.current;
     if (!list) return;
-    const activeLine = activeLyricRef.current;
-    if (!activeLine) {
-      list.scrollTo({ top: 0 });
+    const target = focusElRef.current;
+    if (!target || !list.contains(target)) {
+      list.scrollTo({ top: 0, behavior });
       return;
     }
     const listRect = list.getBoundingClientRect();
-    const lineRect = activeLine.getBoundingClientRect();
-    // Desktop: текущая строка по центру блока «обложка + управление».
-    // Mobile (блок выше текста): ~40% высоты списка.
-    const main = mainRef.current?.getBoundingClientRect();
-    const mainCenter = main ? main.top + main.height / 2 - listRect.top : -1;
+    const mainRect = mainRef.current?.getBoundingClientRect();
+    const mainCenter = mainRect
+      ? mainRect.top + mainRect.height / 2 - listRect.top
+      : -1;
     const targetY =
       mainCenter > 0 && mainCenter < list.clientHeight
         ? mainCenter
         : list.clientHeight * 0.4;
     list.scrollTo({
-      top:
-        list.scrollTop +
-        (lineRect.top - listRect.top) +
-        lineRect.height / 2 -
-        targetY,
-      behavior: "smooth",
+      top: target.offsetTop + target.offsetHeight / 2 - targetY,
+      behavior,
     });
-  }, [activeLyricIndex, fullscreen, lyricGapAfterIndex, lyricLines.length]);
+  }
+
+  useLayoutEffect(() => {
+    if (fullscreen) setOpenId((value) => value + 1);
+  }, [fullscreen]);
+  useLayoutEffect(() => {
+    centerLyrics("auto");
+  }, [listKey]);
+
+  useEffect(() => {
+    centerLyrics("smooth");
+  }, [activeItemIndex]);
+
+  useLayoutEffect(() => {
+    const layout = layoutRef.current;
+    const main = mainRef.current;
+    if (!layout || !main) return;
+    function measure() {
+      const style = getComputedStyle(layout!);
+      const left = parseFloat(style.paddingLeft) || 0;
+      const right = parseFloat(style.paddingRight) || 0;
+      const top = parseFloat(style.paddingTop) || 0;
+      const bottom = parseFloat(style.paddingBottom) || 0;
+      const x =
+        left +
+        (layout!.clientWidth - left - right) / 2 -
+        (main!.offsetLeft + main!.offsetWidth / 2);
+      const y =
+        top +
+        (layout!.clientHeight - top - bottom) / 2 -
+        (main!.offsetTop + main!.offsetHeight / 2);
+      layout!.style.setProperty("--fs-shift-x", `${x.toFixed(1)}px`);
+      layout!.style.setProperty("--fs-shift-y", `${y.toFixed(1)}px`);
+      centerLyrics("auto");
+    }
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(layout);
+    return () => observer.disconnect();
+  }, [Boolean(track)]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -579,9 +683,7 @@ export function AudioPlayer({
     }
 
     pendingTrackTransitionRef.current = false;
-    if (audio && nextTrack.url) {
-      void fadeAudioTo(0, 0);
-    }
+    if (audio && nextTrack.url) void fadeAudioTo(0, 0);
     beginTrack();
   }
 
@@ -688,7 +790,6 @@ export function AudioPlayer({
     coverTimer.current = window.setTimeout(() => setCoverActive(false), 3500);
   }
 
-  // На тач-устройствах нет hover: тап по обложке показывает/прячет управление.
   function onCoverPointerUp(event: PointerEvent<HTMLDivElement>) {
     if (event.pointerType === "mouse") return;
     if ((event.target as HTMLElement).closest("button, input")) {
@@ -898,7 +999,10 @@ export function AudioPlayer({
           <ChevronDown size={24} />
         </button>
 
-        <div className="zovfy-fullscreen-layout">
+        <div
+          className={`zovfy-fullscreen-layout${lyricsOpen ? "" : " no-lyrics"}`}
+          ref={layoutRef}
+        >
           <div className="zovfy-fullscreen-main" ref={mainRef}>
             <div
               className={`zovfy-fs-cover${isPlaying ? "" : " paused"}${coverActive ? " show-controls" : ""}`}
@@ -1066,76 +1170,94 @@ export function AudioPlayer({
           </div>
 
           <section
-            className={`zovfy-fullscreen-lyrics${showLyrics ? " visible" : " collapsed"}`}
-            aria-hidden={!showLyrics}
+            className={`zovfy-fullscreen-lyrics${lyricsOpen ? "" : " collapsed"}`}
+            aria-hidden={!lyricsOpen}
             aria-label={`Текст песни: ${track.title}`}
           >
             <div
-              className={`zovfy-fullscreen-lyrics-lines${lyricsSynced ? "" : " plain"}${beforeFirstLyric ? " before-first" : ""}`}
+              key={listKey}
               ref={lyricsListRef}
+              className={`zovfy-fullscreen-lyrics-lines${
+                lyricsView ? (lyricsView.synced ? "" : " plain") : " status"
+              }`}
             >
-              {currentLyrics?.error ? (
-                <p className="zovfy-fullscreen-lyric-message" role="status">
-                  {currentLyrics.error}
-                </p>
-              ) : lyricLines.length ? (
-                <>
-                  {beforeFirstLyric && (
-                    <div
-                      className="zovfy-lyrics-dots lyric-gap active"
-                      aria-hidden="true"
-                    >
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                  )}
-                  {lyricLines.map((line, index) => (
-                    <Fragment key={`${line.time ?? "static"}-${index}`}>
-                      <p
-                        className={`zovfy-fullscreen-lyric${index === activeLyricIndex && index !== lyricGapAfterIndex ? " active" : ""}${index === 0 && activeLyricIndex === 0 && index !== lyricGapAfterIndex ? " first-active" : ""}${line.time !== null ? " seekable" : ""}`}
-                        ref={
-                          index === activeLyricIndex &&
-                          index !== lyricGapAfterIndex
-                            ? activeLyricRef
-                            : null
-                        }
+              {lyricsView ? (
+                lyricsView.items.map((item, index) => {
+                  const focusIndex = activeItemIndex >= 0 ? activeItemIndex : 0;
+                  const distance = lyricsView.synced
+                    ? Math.abs(index - focusIndex) +
+                      (activeItemIndex >= 0 ? 0 : 1)
+                    : index;
+                  const active = index === activeItemIndex;
+                  const focus = lyricsView.synced && index === focusIndex;
+                  const style = { "--d": distance } as React.CSSProperties;
+
+                  if (item.kind === "gap") {
+                    const progress = Math.min(
+                      1,
+                      Math.max(
+                        0,
+                        (lyricsView.clock - item.start) /
+                          (item.end - item.start),
+                      ),
+                    );
+                    return (
+                      <div
+                        className={`zovfy-fullscreen-lyric zovfy-lyric-gap${active ? " active" : ""}`}
+                        key={`gap-${item.start.toFixed(1)}`}
+                        ref={focus ? setFocusEl : undefined}
                         style={
                           {
-                            "--d":
-                              activeLyricIndex < 0
-                                ? index + 1
-                                : Math.abs(index - activeLyricIndex),
-                            "--i": index,
+                            ...style,
+                            "--p": progress.toFixed(3),
                           } as React.CSSProperties
                         }
-                        onClick={() => {
-                          if (line.time !== null) seek(line.time);
-                        }}
+                        aria-hidden="true"
                       >
-                        {line.text}
-                      </p>
-                      {lyricsSynced && index === lyricGapAfterIndex && (
-                        <div
-                          className="zovfy-lyrics-dots lyric-gap active"
-                          ref={activeLyricRef}
-                          aria-hidden="true"
-                        >
-                          <span />
-                          <span />
-                          <span />
-                        </div>
-                      )}
-                    </Fragment>
-                  ))}
-                </>
-              ) : (
-                <p className="zovfy-fullscreen-lyric-message">
-                  {hasLyricsContent
-                    ? "Не удалось прочитать текст песни."
-                    : "Для этого трека пока нет текста."}
+                        <span className="zovfy-lyric-dots">
+                          {[0, 1, 2].map((dot) => (
+                            <i
+                              key={dot}
+                              style={{ "--i": dot } as React.CSSProperties}
+                            />
+                          ))}
+                        </span>
+                      </div>
+                    );
+                  }
+
+                  const { line, lineIndex } = item;
+                  return (
+                    <p
+                      className={`zovfy-fullscreen-lyric${active ? " active" : ""}${line.time !== null ? " seekable" : ""}`}
+                      key={`${line.time ?? "static"}-${lineIndex}`}
+                      ref={focus ? setFocusEl : undefined}
+                      style={style}
+                      onClick={() => {
+                        if (line.time !== null) seek(line.time);
+                      }}
+                    >
+                      {line.text}
+                    </p>
+                  );
+                })
+              ) : lyricsStatus === "error" ? (
+                <p className="zovfy-fullscreen-lyric-message" role="status">
+                  {lyricsErrorText}
                 </p>
-              )}
+              ) : lyricsStatus === "pending" && lyricsOpen ? (
+                <div className="zovfy-lyrics-skeleton" aria-hidden="true">
+                  {[72, 52, 84, 60, 76].map((width, index) => (
+                    <span
+                      key={index}
+                      style={{
+                        width: `${width}%`,
+                        animationDelay: `${index * 140}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
           </section>
         </div>

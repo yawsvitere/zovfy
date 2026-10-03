@@ -1,5 +1,6 @@
 import "../styles/catalog.css";
 import type { Album } from "../types";
+import { AlbumGraph } from "./AlbumGraph";
 
 type Props = {
   albums: Album[];
@@ -20,51 +21,12 @@ export function HomePage({
 
   return (
     <div className="home">
-      <ol className="rows">
-        {albums.map((album, i) => (
-          <li
-            key={album.id}
-            className="row"
-            style={{ animationDelay: `${i * 80}ms` }}
-          >
-            <span className="row-index">{String(i + 1).padStart(2, "0")}</span>
-
-            <button className="row-main" onClick={() => onOpenAlbum(album)}>
-              <span className="disc">
-                <span className="vinyl">
-                  <span className="vinyl-spin">
-                    <img className="vinyl-label" src={album.coverUrl} alt="" />
-                    <i className="vinyl-hole" />
-                  </span>
-                  <span className="vinyl-shine" />
-                </span>
-                <img className="sleeve" src={album.coverUrl} alt={album.name} />
-              </span>
-              <span className="row-title">{album.name}</span>
-            </button>
-
-            <button
-              className="row-artist"
-              onClick={() => onOpenArtist(album.artist)}
-            >
-              {album.artist} →
-            </button>
-          </li>
-        ))}
-
-        <li
-          className="row row-new"
-          style={{ animationDelay: `${albums.length * 80}ms` }}
-        >
-          <span className="row-index">
-            {String(albums.length + 1).padStart(2, "0")}
-          </span>
-          <button className="row-main" onClick={onCreate}>
-            <span className="disc disc-empty">+</span>
-            <span className="row-title">Пустая ячейка</span>
-          </button>
-        </li>
-      </ol>
+      <AlbumGraph
+        albums={albums}
+        onOpenAlbum={onOpenAlbum}
+        onOpenArtist={onOpenArtist}
+        onCreate={onCreate}
+      />
     </div>
   );
 }

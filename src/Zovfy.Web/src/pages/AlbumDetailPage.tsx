@@ -1,4 +1,11 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from "react";
 import {
   ArrowLeft,
   Clock3,
@@ -18,6 +25,7 @@ import { AlbumEditModal } from "../components/AlbumEditModal";
 import type { Album, Track } from "../types";
 import "../styles/album-cards.css";
 import "../styles/album-detail.css";
+import "../styles/album-motion.css";
 
 type Props = {
   album: Album | null;
@@ -71,6 +79,44 @@ function trackWord(count: number) {
   return "треков";
 }
 
+function useFitViewport(
+  ref: { current: HTMLElement | null },
+  watchKey: string | null,
+) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !watchKey) return;
+    let scroller: HTMLElement = document.documentElement;
+    for (
+      let p = el.parentElement;
+      p && p !== document.body;
+      p = p.parentElement
+    ) {
+      const overflowY = getComputedStyle(p).overflowY;
+      if (overflowY === "auto" || overflowY === "scroll") {
+        scroller = p;
+        break;
+      }
+    }
+    const prevOverflow = scroller.style.overflowY;
+    scroller.scrollTop = 0;
+    scroller.style.overflowY = "hidden";
+
+    const measure = () => {
+      el.style.setProperty(
+        "--page-top",
+        `${Math.max(0, el.getBoundingClientRect().top)}px`,
+      );
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      scroller.style.overflowY = prevOverflow;
+    };
+  }, [ref, watchKey]);
+}
+
 export function AlbumDetailPage({
   album,
   loading,
@@ -94,6 +140,8 @@ export function AlbumDetailPage({
     readSavedIds("zovfy.likedTracks"),
   );
   const [artistAvatarUrl, setArtistAvatarUrl] = useState<string | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  useFitViewport(pageRef, album && !loading ? album.id : null);
 
   useEffect(() => {
     let active = true;
@@ -222,6 +270,8 @@ export function AlbumDetailPage({
 
   return (
     <div
+      key={album.id}
+      ref={pageRef}
       className={`album-page${tracks.length > 0 && tracks.length <= 2 ? " album-page--single" : ""}`}
     >
       <section className="album-content">
@@ -361,6 +411,7 @@ export function AlbumDetailPage({
                 <div
                   className={`track-row${trackIsPlaying ? " playing" : ""}${isHovered ? " hovered" : ""}`}
                   key={id}
+                  style={{ "--i": index } as CSSProperties}
                   role="button"
                   tabIndex={0}
                   onClick={() => playTrack(track, index)}
