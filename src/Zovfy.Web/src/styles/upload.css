@@ -5,6 +5,13 @@
   border: 0;
 }
 
+.album-form--single {
+  display: grid;
+  min-height: calc(100vh - 50px);
+  min-height: calc(100svh - 50px);
+  align-content: safe center;
+}
+
 .album-form > .message {
   margin: 16px 24px 0;
 }
@@ -463,6 +470,11 @@
 }
 
 @media (max-width: 760px) {
+  .album-form--single {
+    min-height: calc(100vh - 210px);
+    min-height: calc(100svh - 210px);
+  }
+
   .album-head {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;

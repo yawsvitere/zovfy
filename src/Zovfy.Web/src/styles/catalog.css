@@ -3,6 +3,7 @@
   --accent: var(--accent, #e91e8c);
   display: grid;
   gap: 32px;
+  padding-bottom: 100px;
 }
 
 .home-head h1 {

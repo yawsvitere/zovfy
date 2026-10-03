@@ -175,12 +175,18 @@ export function AudioPlayer({
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const previousVolume = useRef(0.75);
   const coverTimer = useRef<number | undefined>(undefined);
+  const transitionGainRef = useRef(1);
+  const fadeFrameRef = useRef<number | null>(null);
+  const cancelFadeRef = useRef<(() => void) | null>(null);
+  const trackTransitionRef = useRef(0);
+  const pendingTrackTransitionRef = useRef(false);
   const [track, setTrack] = useState<Track | null>(null);
   const [queue, setQueue] = useState<Track[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.75);
+  const volumeRef = useRef(volume);
   const [repeatMode, setRepeatMode] = useState(0);
   const [shuffled, setShuffled] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -432,13 +438,7 @@ export function AudioPlayer({
         return;
       }
 
-      currentTrackRef.current = nextTrack;
-      setTrack(nextTrack);
-      setError("");
-      if (!audio || !nextTrack.url) return;
-      audio.src = nextTrack.url;
-      audio.load();
-      void audio.play();
+      startTrack(nextTrack);
     }
     window.addEventListener("zovfy:play-track", receivePlayRequest);
     return () =>
@@ -480,7 +480,8 @@ export function AudioPlayer({
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio) audio.volume = volume;
+    volumeRef.current = volume;
+    if (audio) audio.volume = volume * transitionGainRef.current;
   }, [volume]);
 
   useEffect(() => {
@@ -502,20 +503,89 @@ export function AudioPlayer({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [fullscreen, queueOpen]);
 
-  useEffect(() => () => window.clearTimeout(coverTimer.current), []);
+  useEffect(
+    () => () => {
+      window.clearTimeout(coverTimer.current);
+      cancelFadeRef.current?.();
+    },
+    [],
+  );
 
-  function startTrack(nextTrack: Track) {
-    currentTrackRef.current = nextTrack;
-    setTrack(nextTrack);
-    setError("");
+  function fadeAudioTo(target: number, duration: number) {
+    cancelFadeRef.current?.();
     const audio = audioRef.current;
-    if (!audio || !nextTrack.url) return;
-    audio.src = nextTrack.url;
-    audio.load();
-    void audio.play();
+    if (!audio) return Promise.resolve(false);
+
+    if (duration <= 0) {
+      transitionGainRef.current = target;
+      audio.volume = volumeRef.current * target;
+      return Promise.resolve(true);
+    }
+
+    const initialGain = transitionGainRef.current;
+    const startedAt = performance.now();
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      let cancel: () => void;
+      const finish = (completed: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (fadeFrameRef.current !== null) {
+          cancelAnimationFrame(fadeFrameRef.current);
+          fadeFrameRef.current = null;
+        }
+        if (cancelFadeRef.current === cancel) cancelFadeRef.current = null;
+        resolve(completed);
+      };
+      cancel = () => finish(false);
+      cancelFadeRef.current = cancel;
+
+      const step = (now: number) => {
+        if (settled) return;
+        const progress = Math.min((now - startedAt) / duration, 1);
+        const easedProgress = progress * (2 - progress);
+        const gain = initialGain + (target - initialGain) * easedProgress;
+        transitionGainRef.current = gain;
+        if (audioRef.current === audio) {
+          audio.volume = volumeRef.current * gain;
+        }
+        if (progress >= 1) {
+          finish(true);
+          return;
+        }
+        fadeFrameRef.current = requestAnimationFrame(step);
+      };
+      fadeFrameRef.current = requestAnimationFrame(step);
+    });
   }
 
-  function stepTrack(direction: -1 | 1) {
+  function startTrack(nextTrack: Track, fadeOut = true) {
+    const transitionId = ++trackTransitionRef.current;
+    const audio = audioRef.current;
+    const beginTrack = () => {
+      if (transitionId !== trackTransitionRef.current) return;
+      pendingTrackTransitionRef.current = false;
+      currentTrackRef.current = nextTrack;
+      setTrack(nextTrack);
+      setError("");
+    };
+
+    if (audio && nextTrack.url && !audio.paused && fadeOut) {
+      pendingTrackTransitionRef.current = true;
+      void fadeAudioTo(0, 120).then((completed) => {
+        if (completed) beginTrack();
+      });
+      return;
+    }
+
+    pendingTrackTransitionRef.current = false;
+    if (audio && nextTrack.url) {
+      void fadeAudioTo(0, 0);
+    }
+    beginTrack();
+  }
+
+  function stepTrack(direction: -1 | 1, fadeOut = true) {
     if (!queue.length) return;
     const index = Math.max(
       0,
@@ -525,18 +595,21 @@ export function AudioPlayer({
       const candidates = queue.filter(
         (_, candidateIndex) => candidateIndex !== index,
       );
-      startTrack(candidates[Math.floor(Math.random() * candidates.length)]);
+      startTrack(
+        candidates[Math.floor(Math.random() * candidates.length)],
+        fadeOut,
+      );
       return;
     }
     const nextIndex = index + direction;
-    if (nextIndex < 0) startTrack(queue.at(-1)!);
+    if (nextIndex < 0) startTrack(queue.at(-1)!, fadeOut);
     else if (nextIndex >= queue.length) {
-      if (repeatMode === 1) startTrack(queue[0]);
+      if (repeatMode === 1) startTrack(queue[0], fadeOut);
       else {
         setIsPlaying(false);
         onPlayingChange(false);
       }
-    } else startTrack(queue[nextIndex]);
+    } else startTrack(queue[nextIndex], fadeOut);
   }
 
   function previousTrack() {
@@ -554,7 +627,7 @@ export function AudioPlayer({
       void audioRef.current.play();
       return;
     }
-    stepTrack(1);
+    stepTrack(1, false);
   }
 
   function toggleLike() {
@@ -1175,8 +1248,15 @@ export function AudioPlayer({
         onPlay={() => {
           setIsPlaying(true);
           onPlayingChange(true);
+          void fadeAudioTo(1, 220);
         }}
         onPause={() => {
+          if (pendingTrackTransitionRef.current) {
+            pendingTrackTransitionRef.current = false;
+            trackTransitionRef.current += 1;
+            cancelFadeRef.current?.();
+            void fadeAudioTo(1, 100);
+          }
           setIsPlaying(false);
           onPlayingChange(false);
         }}

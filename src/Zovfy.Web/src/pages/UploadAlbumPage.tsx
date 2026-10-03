@@ -293,7 +293,10 @@ export function UploadAlbumPage({
   }
 
   return (
-    <form className="album-form" onSubmit={handleSubmit}>
+    <form
+      className={`album-form${tracks.length > 0 && tracks.length <= 2 ? " album-form--single" : ""}`}
+      onSubmit={handleSubmit}
+    >
       {error && (
         <div className="message message-error" role="alert">
           {error}

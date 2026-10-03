@@ -221,7 +221,9 @@ export function AlbumDetailPage({
   }
 
   return (
-    <div className="album-page">
+    <div
+      className={`album-page${tracks.length > 0 && tracks.length <= 2 ? " album-page--single" : ""}`}
+    >
       <section className="album-content">
         <header className="album-hero">
           <div className="album-cover-button">
