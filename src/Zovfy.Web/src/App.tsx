@@ -354,7 +354,6 @@ function App() {
               durations={trackDurations}
               onPlayTracks={playTracks}
               onBack={() => navigate("albums")}
-              onOpenAlbum={openAlbum}
               onOpenArtist={openArtist}
               onUpdateAlbum={saveAlbum}
             />

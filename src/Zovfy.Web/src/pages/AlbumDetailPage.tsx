@@ -41,7 +41,6 @@ type Props = {
     albumId?: string,
   ) => void;
   onBack: () => void;
-  onOpenAlbum: (album: Album) => void;
   onOpenArtist: (name: string) => void;
   onUpdateAlbum: (id: string, formData: FormData) => Promise<void>;
 };
@@ -125,7 +124,6 @@ export function AlbumDetailPage({
   durations,
   onPlayTracks,
   onBack,
-  onOpenAlbum,
   onOpenArtist,
   onUpdateAlbum,
 }: Props) {
