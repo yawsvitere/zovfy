@@ -97,6 +97,18 @@ export async function recordListening(
   );
 }
 
+export async function getTrackLyrics(
+  trackId: string,
+  signal?: AbortSignal,
+): Promise<{ lrc: string | null; ttml: string | null }> {
+  return parseResponse<{ lrc: string | null; ttml: string | null }>(
+    await fetch(`/api/tracks/${encodeURIComponent(trackId)}/lyrics`, {
+      credentials: "include",
+      signal,
+    }),
+  );
+}
+
 export type UserLikes = {
   albums: { id: string }[];
   tracks: { id: string }[];

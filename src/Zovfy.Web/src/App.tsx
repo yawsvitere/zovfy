@@ -12,7 +12,6 @@ import {
 } from "./api";
 import { AudioPlayer } from "./components/AudioPlayer";
 import { AlbumHeader } from "./components/AlbumHeader";
-import { AlbumSidebar } from "./components/AlbumSidebar";
 import { AuthModal } from "./components/AuthModal";
 import { AlbumDetailPage } from "./pages/AlbumDetailPage.tsx";
 import { AlbumsPage } from "./pages/AlbumsPage";
@@ -38,7 +37,6 @@ function App() {
     localStorage.getItem("zovfy.accessToken"),
   );
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -254,8 +252,17 @@ function App() {
     );
   }
 
-  function playTracks(tracks: Track[], index: number, coverUrl?: string) {
-    const queue = tracks.map((track) => ({ ...track, coverUrl }));
+  function playTracks(
+    tracks: Track[],
+    index: number,
+    coverUrl?: string,
+    albumId?: string,
+  ) {
+    const queue = tracks.map((track) => ({
+      ...track,
+      coverUrl,
+      albumId: track.albumId ?? albumId,
+    }));
     const track = queue[index];
     if (track) {
       window.dispatchEvent(
@@ -277,19 +284,20 @@ function App() {
       className={`music-app${isPlaying ? " is-playing" : ""}`}
       style={appStyle}
     >
-      <AlbumSidebar
-        albums={albums}
-        screen={screen}
-        expanded={sidebarExpanded}
-        onNavigate={navigate}
-      />
       <main className="music-main">
         <AlbumHeader
           authenticated={Boolean(accessToken)}
           avatarUrl={userAvatarUrl}
-          sidebarExpanded={sidebarExpanded}
           onLogin={() => setAuthOpen(true)}
-          onToggleSidebar={() => setSidebarExpanded((expanded) => !expanded)}
+          onHome={() => navigate("home")}
+          onOpenLikes={() => navigate("albums")}
+          onCreate={() => navigate("create")}
+          onLogout={() => {
+            localStorage.removeItem("zovfy.accessToken");
+            setAccessToken(null);
+            setUserAvatarUrl(null);
+            setNotice("Вы вышли из аккаунта.");
+          }}
         />
         <section className="music-content">
           {error && (
@@ -371,6 +379,10 @@ function App() {
         onDurationChange={(trackId, duration) =>
           setTrackDurations((current) => ({ ...current, [trackId]: duration }))
         }
+        onOpenAlbum={(track) => {
+          const album = albums.find((item) => item.id === track.albumId);
+          if (album) void openAlbum(album);
+        }}
         onOpenArtist={openArtist}
       />
     </div>

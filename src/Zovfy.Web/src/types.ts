@@ -1,6 +1,7 @@
 export type Screen = "home" | "albums" | "create" | "detail" | "artist";
 export type Track = {
   id?: string;
+  albumId?: string;
   title: string;
   artist?: string;
   url?: string;

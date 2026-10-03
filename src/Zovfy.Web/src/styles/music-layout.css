@@ -90,7 +90,7 @@ button:disabled {
   border: 0;
   font-size: 21px;
   font-weight: 750;
-  cursor: pointer;
+  cursor: default;
 }
 
 .music-header-brand img {
@@ -339,6 +339,46 @@ button:disabled {
   align-items: center;
   gap: 9px;
   margin-left: auto;
+}
+
+.music-user-menu {
+  position: relative;
+}
+
+.music-user-menu-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 40;
+  display: grid;
+  min-width: 200px;
+  gap: 4px;
+  padding: 8px;
+  background: rgba(22, 22, 26, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(12px);
+}
+
+.music-user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--text-color);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.music-user-menu-item:hover {
+  color: var(--primary-pink);
+  background: var(--soft-pink);
 }
 
 .music-heading {

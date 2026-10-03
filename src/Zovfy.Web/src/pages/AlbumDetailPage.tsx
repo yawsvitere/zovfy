@@ -1,10 +1,7 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import {
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
-  Disc3,
   Download,
   Heart,
   MoreVertical,
@@ -29,7 +26,12 @@ type Props = {
   currentTrackId: string | null;
   isPlaying: boolean;
   durations: Record<string, number>;
-  onPlayTracks: (tracks: Track[], index: number, coverUrl?: string) => void;
+  onPlayTracks: (
+    tracks: Track[],
+    index: number,
+    coverUrl?: string,
+    albumId?: string,
+  ) => void;
   onBack: () => void;
   onOpenAlbum: (album: Album) => void;
   onOpenArtist: (name: string) => void;
@@ -71,7 +73,6 @@ function trackWord(count: number) {
 
 export function AlbumDetailPage({
   album,
-  albums,
   loading,
   currentTrackId,
   isPlaying,
@@ -86,9 +87,6 @@ export function AlbumDetailPage({
   const [visibleMenuId, setVisibleMenuId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [notice, setNotice] = useState("");
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const recommendationsRef = useRef<HTMLDivElement | null>(null);
   const [likedAlbums, setLikedAlbums] = useState(() =>
     readSavedIds("zovfy.likedAlbums"),
   );
@@ -147,51 +145,13 @@ export function AlbumDetailPage({
     return () => document.removeEventListener("click", onDocumentClick);
   }, [visibleMenuId]);
 
-  function scrollRecommendations(direction: 1 | -1) {
-    const node = recommendationsRef.current;
-    if (!node) return;
-    const amount = Math.max(node.clientWidth * 0.8, 260);
-    node.scrollBy({ left: direction * amount, behavior: "smooth" });
-  }
-
   const tracks = album?.tracks ?? [];
-  const recommended = albums.filter((item) => item?.id !== album?.id);
-  const sameArtist = recommended.filter(
-    (item) => item.artist === album?.artist,
-  );
-  const visibleRecommendations = (
-    sameArtist.length ? sameArtist : recommended
-  ).slice(0, 8);
   const totalDuration = tracks.reduce(
     (total, track, index) =>
       total + (track.duration ?? durations[trackKey(track, index)] ?? 0),
     0,
   );
   const albumLiked = album ? likedAlbums.has(album.id) : false;
-
-  useEffect(() => {
-    const element = recommendationsRef.current;
-    if (!element) {
-      setCanScrollLeft(false);
-      setCanScrollRight(false);
-      return;
-    }
-
-    const updateState = () => {
-      const maxScrollLeft = element.scrollWidth - element.clientWidth;
-      setCanScrollLeft(element.scrollLeft > 8);
-      setCanScrollRight(element.scrollLeft < maxScrollLeft - 8);
-    };
-
-    updateState();
-    element.addEventListener("scroll", updateState, { passive: true });
-    window.addEventListener("resize", updateState);
-
-    return () => {
-      element.removeEventListener("scroll", updateState);
-      window.removeEventListener("resize", updateState);
-    };
-  }, [visibleRecommendations.length]);
 
   if (loading) return <div className="loading-state">Загружаю альбом…</div>;
   if (!album)
@@ -244,7 +204,7 @@ export function AlbumDetailPage({
       setNotice("Для этого трека пока нет аудиофайла.");
       return;
     }
-    onPlayTracks(tracks, index, album?.coverUrl);
+    onPlayTracks(tracks, index, album?.coverUrl, album?.id);
     setNotice("");
   }
 
@@ -500,74 +460,6 @@ export function AlbumDetailPage({
           onClose={() => setEditOpen(false)}
           onSave={(formData) => onUpdateAlbum(album.id, formData)}
         />
-      )}
-
-      {visibleRecommendations.length > 0 && (
-        <section className="recommended-section">
-          <h3 className="rec-title">
-            {sameArtist.length
-              ? `Больше от ${album.artist}`
-              : "Рекомендуем также"}
-          </h3>
-          <div className="carousel-container">
-            {canScrollLeft && (
-              <button
-                className="carousel-arrow carousel-arrow-left"
-                onClick={() => scrollRecommendations(-1)}
-                aria-label="Назад"
-              >
-                <ChevronLeft size={18} />
-              </button>
-            )}
-            <div className="carousel-track" ref={recommendationsRef}>
-              {visibleRecommendations.map((item) => (
-                <article className="album-card" key={item.id}>
-                  <button
-                    className="recommended-open"
-                    onClick={() => onOpenAlbum(item)}
-                    aria-label={`Открыть альбом ${item.name}`}
-                  >
-                    {item.coverUrl ? (
-                      <img
-                        className="album-cover"
-                        src={item.coverUrl}
-                        alt={item.name}
-                        loading="lazy"
-                        onError={(event) => {
-                          event.currentTarget.hidden = true;
-                        }}
-                      />
-                    ) : (
-                      <span className="album-cover album-cover-fallback">
-                        <Disc3 size={38} />
-                      </span>
-                    )}
-                    <span className="album-info">
-                      <span className="album-title">{item.name}</span>
-                      <span className="album-artist">{item.artist}</span>
-                    </span>
-                  </button>
-                  <button
-                    className="play-button"
-                    onClick={() => onOpenAlbum(item)}
-                    aria-label={`Открыть ${item.name}`}
-                  >
-                    <Play size={17} fill="currentColor" />
-                  </button>
-                </article>
-              ))}
-            </div>
-            {canScrollRight && (
-              <button
-                className="carousel-arrow carousel-arrow-right"
-                onClick={() => scrollRecommendations(1)}
-                aria-label="Вперед"
-              >
-                <ChevronRight size={18} />
-              </button>
-            )}
-          </div>
-        </section>
       )}
     </div>
   );

@@ -22,7 +22,11 @@ export function HomePage({
     <div className="home">
       <ol className="rows">
         {albums.map((album, i) => (
-          <li key={album.id} className="row">
+          <li
+            key={album.id}
+            className="row"
+            style={{ animationDelay: `${i * 80}ms` }}
+          >
             <span className="row-index">{String(i + 1).padStart(2, "0")}</span>
 
             <button className="row-main" onClick={() => onOpenAlbum(album)}>
@@ -48,7 +52,10 @@ export function HomePage({
           </li>
         ))}
 
-        <li className="row row-new">
+        <li
+          className="row row-new"
+          style={{ animationDelay: `${albums.length * 80}ms` }}
+        >
           <span className="row-index">
             {String(albums.length + 1).padStart(2, "0")}
           </span>
